@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  .overdue {
+    background-color: #f8d7da !important;
+  }
+
+  /* Mobile card styling */
+  .cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .refill-card {
+    padding: 1rem;
+  }
+
+  .refill-card small {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<!-- Facility Filter -->
+<form method="get" class="mb-3">
+  <select name="facility" onchange="this.form.submit()" class="form-select w-25">
+    <option value="">All Facilities</option>
+    {% for facility in facilities %}
+    <option value="{{ facility.id }}" {% if facility.id|stringformat:"s" == selected_facility %} selected {% endif %}>
+      {{ facility.name }}
+    </option>
+    {% endfor %}
+  </select>
+</form>
+
+<!-- MOBILE VIEW: CARDS -->
+<div class="d-block d-md-none cards-container">
+  <!-- Daily -->
+  <div class="card text-white bg-primary refill-card">
+    <div class="card-body">
+      <h5>Daily Expected ({{ daily_expected.count }})</h5>
+      {% for refill in daily_expected %}
+      <small {% if refill.next_appointment and refill.next_appointment < today %} class="overdue" {% endif %}>
+        {{ refill.unique_id }} | {{ refill.facility.name }}<br>
+        {{ refill.next_appointment }} | {{ refill.current_regimen }}<br>
+        Case Manager: {{ refill.case_manager }}
+      </small>
+      <hr>
+      {% empty %}
+      <small>No daily expected refills</small>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Weekly -->
+  <div class="card text-dark bg-warning refill-card">
+    <div class="card-body">
+      <h5>Weekly Expected ({{ weekly_expected.count }})</h5>
+      {% for refill in weekly_expected %}
+      <small {% if refill.next_appointment and refill.next_appointment < today %} class="overdue" {% endif %}>
+        {{ refill.unique_id }} | {{ refill.facility.name }}<br>
+        {{ refill.next_appointment }} | {{ refill.current_regimen }}<br>
+        Case Manager: {{ refill.case_manager }}
+      </small>
+      <hr>
+      {% empty %}
+      <small>No weekly expected refills</small>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Monthly -->
+  <div class="card text-white bg-success refill-card">
+    <div class="card-body">
+      <h5>Monthly Expected ({{ monthly_expected.count }})</h5>
+      {% for refill in monthly_expected %}
+      <small {% if refill.next_appointment and refill.next_appointment < today %} class="overdue" {% endif %}>
+        {{ refill.unique_id }} | {{ refill.facility.name }}<br>
+        {{ refill.next_appointment }} | {{ refill.current_regimen }}<br>
+        Case Manager: {{ refill.case_manager }}
+      </small>
+      <hr>
+      {% empty %}
+      <small>No monthly expected refills</small>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP VIEW: TABLES -->
+<div class="d-none d-md-block">
+  <!-- Daily Table -->
+  <h3>Daily Expected</h3>
+  <table class="table table-striped table-bordered">
+    <thead class="table-dark">
+      <tr>
+        <th>Unique ID</th>
+        <th>Sex</th>
+        <th>Facility</th>
+        <th>Last Pickup</th>
+        <th>Refill (Days)</th>
+        <th class="text-danger">Next Appointment</th>
+        <th>Regimen</th>
+        <th>Case Manager</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for refill in daily_expected %}
+      <tr {% if refill.next_appointment and refill.next_appointment < today %} class="overdue" {% endif %}>
+        <td>{{ refill.unique_id }}</td>
+        <td>{{ refill.sex }}</td>
+        <td>{{ refill.facility.name }}</td>
+        <td>{{ refill.last_pickup_date }}</td>
+        <td>{{ refill.months_of_refill_days }}</td>
+        <td>{{ refill.next_appointment }}</td>
+        <td>{{ refill.current_regimen }}</td>
+        <td>{{ refill.case_manager }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center">No daily expected refills</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Weekly Table -->
+  <h3>Weekly Expected</h3>
+  <table class="table table-striped table-bordered">
+    <thead class="table-dark">
+      <tr>
+        <th>Unique ID</th>
+        <th>Sex</th>
+        <th>Facility</th>
+        <th>Last Pickup</th>
+        <th>Refill (Days)</th>
+        <th class="text-danger">Next Appointment</th>
+        <th>Regimen</th>
+        <th>Case Manager</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for refill in weekly_expected %}
+      <tr {% if refill.next_appointment and refill.next_appointment < today %} class="overdue" {% endif %}>
+        <td>{{ refill.unique_id }}</td>
+        <td>{{ refill.sex }}</td>
+        <td>{{ refill.facility.name }}</td>
+        <td>{{ refill.last_pickup_date }}</td>
+        <td>{{ refill.months_of_refill_days }}</td>
+        <td>{{ refill.next_appointment }}</td>
+        <td>{{ refill.current_regimen }}</td>
+        <td>{{ refill.case_manager }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center">No weekly expected refills</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Monthly Table -->
+  <h3>Monthly Expected</h3>
+  <table class="table table-striped table-bordered">
+    <thead class="table-dark">
+      <tr>
+        <th>Unique ID</th>
+        <th>Sex</th>
+        <th>Facility</th>
+        <th>Last Pickup</th>
+        <th>Refill (Days)</th>
+        <th class="text-danger">Next Appointment</th>
+        <th>Regimen</th>
+        <th>Case Manager</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for refill in monthly_expected %}
+      <tr {% if refill.next_appointment and refill.next_appointment < today %} class="overdue" {% endif %}>
+        <td>{{ refill.unique_id }}</td>
+        <td>{{ refill.sex }}</td>
+        <td>{{ refill.facility.name }}</td>
+        <td>{{ refill.last_pickup_date }}</td>
+        <td>{{ refill.months_of_refill_days }}</td>
+        <td>{{ refill.next_appointment }}</td>
+        <td>{{ refill.current_regimen }}</td>
+        <td>{{ refill.case_manager }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center">No monthly expected refills</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+
+</div>
+<br><br>
+<a href="{% url 'refill_list' %}?download=true" class="btn btn-success">Download Refills as Excel</a>
+<br><br>
+{% endblock content %}

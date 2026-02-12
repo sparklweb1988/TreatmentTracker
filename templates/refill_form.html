@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    {% if form.instance.pk %}
+                        Update Refill Record
+                    {% else %}
+                        Add New Refill
+                    {% endif %}
+                </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row">
+
+                        <!-- Facility -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Facility</label>
+                            {{ form.facility }}
+                        </div>
+
+                        <!-- Unique ID -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unique ID</label>
+                            {{ form.unique_id }}
+                        </div>
+
+                        <!-- Last Pickup Date -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Pickup Date</label>
+                            {{ form.last_pickup_date }}
+                        </div>
+
+                        <!-- Sex -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sex</label>
+                            {{ form.sex }}
+                        </div>
+
+                        <!-- Refill Duration -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Refill Duration (Days)</label>
+                            {{ form.months_of_refill_days }}
+                        </div>
+
+                        <!-- Current Regimen -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Regimen</label>
+                            {{ form.current_regimen }}
+                        </div>
+
+                        <!-- Case Manager -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Case Manager</label>
+                            {{ form.case_manager }}
+                        </div>
+
+                        <!-- Remark -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Remark (Optional)</label>
+                            {{ form.remark }}
+                        </div>
+
+                        <!-- Next Appointment (read-only) -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Next Appointment</label>
+                            <input type="text" class="form-control" value="{{ form.instance.next_appointment }}" readonly>
+                        </div>
+
+                        <!-- Expected IIT Date (read-only) -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expected IIT Date</label>
+                            <input type="text" class="form-control" value="{{ form.instance.expected_iit_date }}" readonly>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-3">
+                        <a href="{% url 'refill_list' %}" class="btn btn-secondary">
+                            Back
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            Save Record
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
