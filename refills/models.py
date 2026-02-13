@@ -21,7 +21,6 @@ class Facility(models.Model):
 
 
 
-
 class Refill(models.Model):
 
     # Choices for refill duration
@@ -85,10 +84,9 @@ class Refill(models.Model):
         - expected_iit_date = next_appointment + 28 days
         """
         if self.last_pickup_date and self.months_of_refill_days:
-            # Ensure next_appointment is just the date portion, not a datetime
-            self.next_appointment = (self.last_pickup_date + timedelta(days=self.months_of_refill_days)).date()
-            # Ensure expected_iit_date is just the date portion, not a datetime
-            self.expected_iit_date = (self.next_appointment + timedelta(days=28)).date()
+            # No need to call .date() as `last_pickup_date` is already a datetime.date
+            self.next_appointment = self.last_pickup_date + timedelta(days=self.months_of_refill_days)
+            self.expected_iit_date = self.next_appointment + timedelta(days=28)
 
     def save(self, *args, **kwargs):
         """

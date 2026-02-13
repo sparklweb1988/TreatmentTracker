@@ -13,7 +13,7 @@ from django.conf import settings
 from django.db.models import F, Q
 from django.core.paginator import Paginator
 from openpyxl import Workbook
-
+from datetime import datetime
 
 
 
@@ -313,12 +313,29 @@ def export_refills_to_excel(refills):
 
 
 
+
+
 def refill_create(request, unique_id=None):
     if unique_id:
         # Fetch the refill by unique_id if passed
         refill = get_object_or_404(Refill, unique_id=unique_id)
     else:
         refill = None  # New refill if no unique_id is passed
+
+    # Get today's date, ensuring it's a datetime.date object
+    today = timezone.now().date()  # `today` is a datetime.date object
+    
+    if refill:
+        # Ensure that next_appointment is a datetime.date (not a datetime.datetime)
+        if isinstance(refill.next_appointment, datetime):  # Check if it's a datetime object
+            refill_next_appointment = refill.next_appointment.date()  # Get only the date part
+        else:
+            refill_next_appointment = refill.next_appointment  # It's already a datetime.date
+
+        # Example comparison (this is just for illustration, customize based on your logic)
+        if refill_next_appointment < today:
+            # Logic if the refill's next appointment is in the past
+            print("This refill's next appointment is in the past.")
 
     if request.method == 'POST':
         if refill:
@@ -337,8 +354,6 @@ def refill_create(request, unique_id=None):
             form = RefillForm()  # Empty form for new refill
 
     return render(request, 'refill_form.html', {'form': form})
-
-
 
 
 
@@ -592,11 +607,6 @@ def daily_refill_list(request):
 
 
 
-
-
-
-
-
 def missed_refills(request):
     today = timezone.now().date()
 
@@ -622,13 +632,11 @@ def missed_refills(request):
     # ================= MISSED REFILLS LOGIC =================
     missed_list = (
         refills.filter(
-            next_appointment__year=today.year,
-            next_appointment__month=today.month,
-            next_appointment__lt=today
+            next_appointment__lt=today  # Appointment is in the past
         )
         .filter(
-            Q(last_pickup_date__lt=F("next_appointment")) |
-            Q(last_pickup_date__isnull=True)
+            Q(last_pickup_date__lt=F("next_appointment")) |  # Pickup after appointment
+            Q(last_pickup_date__isnull=True)  # No pickup yet
         )
         .select_related("facility")  # add "case_manager" if it's a FK
         .order_by("next_appointment")
@@ -647,7 +655,7 @@ def missed_refills(request):
     case_managers_qs = (
         Refill.objects
         .exclude(case_manager__isnull=True)
-        .exclude(case_manager__exact="")
+        .exclude(case_manager__exact="")  # exclude empty strings
         .values_list("case_manager", flat=True)
         .distinct()
     )
@@ -671,7 +679,7 @@ def missed_refills(request):
         worksheet.append(headers)
 
         for refill in missed_list:
-            worksheet.append([
+            worksheet.append([  # Write data to worksheet
                 refill.unique_id,
                 refill.case_manager or "",
                 refill.facility.name if refill.facility else "",
