@@ -18,13 +18,10 @@
             <select name="facility" class="form-select">
                 <option value="">All Facilities</option>
                 {% for facility in facilities %}
-                    <option value="{{ facility.id }}"
-                        {% if selected_facility == facility.id|stringformat:"s" %}
-                            selected
-                        {% endif %}
-                    >
-                        {{ facility.name }}
-                    </option>
+                <option value="{{ facility.id }}" {% if selected_facility == facility.id|stringformat:"s" %} selected
+                    {% endif %}>
+                    {{ facility.name }}
+                </option>
                 {% endfor %}
             </select>
         </div>
@@ -33,13 +30,9 @@
             <select name="case_manager" class="form-select">
                 <option value="">All Case Managers</option>
                 {% for manager in case_managers %}
-                    <option value="{{ manager }}"
-                        {% if selected_case_manager == manager %}
-                            selected
-                        {% endif %}
-                    >
-                        {{ manager }}
-                    </option>
+                <option value="{{ manager }}" {% if selected_case_manager == manager %} selected {% endif %}>
+                    {{ manager }}
+                </option>
                 {% endfor %}
             </select>
         </div>
@@ -66,6 +59,7 @@
                         <th>Last Pickup</th>
                         <th>Next Appointment</th>
                         <th>Days Missed</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,9 +74,9 @@
 
                         <td>
                             {% if refill.last_pickup_date %}
-                                {{ refill.last_pickup_date }}
+                            {{ refill.last_pickup_date }}
                             {% else %}
-                                <span class="text-danger">Never Picked</span>
+                            <span class="text-danger">Never Picked</span>
                             {% endif %}
                         </td>
 
@@ -100,6 +94,12 @@
                             ">
                                 {{ refill.days_missed }} days
                             </span>
+                        </td>
+                        <td>
+                            {% if refill.missed_appointment %}<span class="badge bg-danger">Missed
+                                Appointment</span><br>{% endif %}
+                            <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}"
+                                class="btn btn-primary btn-sm">Add Refills</a>
                         </td>
                     </tr>
                     {% empty %}
@@ -139,9 +139,9 @@
                 <p class="mb-1">
                     <strong>Last Pickup:</strong><br>
                     {% if refill.last_pickup_date %}
-                        {{ refill.last_pickup_date }}
+                    {{ refill.last_pickup_date }}
                     {% else %}
-                        <span class="text-danger">Never Picked</span>
+                    <span class="text-danger">Never Picked</span>
                     {% endif %}
                 </p>
 
@@ -179,18 +179,18 @@
         <ul class="pagination justify-content-center">
 
             {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link"
-                       href="?page=1&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
-                        &laquo; First
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link"
-                       href="?page={{ page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
-                        Previous
-                    </a>
-                </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page=1&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    &laquo; First
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    Previous
+                </a>
+            </li>
             {% endif %}
 
             <li class="page-item active">
@@ -200,18 +200,18 @@
             </li>
 
             {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link"
-                       href="?page={{ page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
-                        Next
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link"
-                       href="?page={{ page_obj.paginator.num_pages }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
-                        Last &raquo;
-                    </a>
-                </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    Next
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ page_obj.paginator.num_pages }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    Last &raquo;
+                </a>
+            </li>
             {% endif %}
 
         </ul>
@@ -220,7 +220,7 @@
     <!-- ================= EXPORT BUTTON ================= -->
     <div class="text-center mt-3">
         <a href="?export=excel&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}"
-           class="btn btn-success">
+            class="btn btn-success">
             Download Excel
         </a>
     </div>
