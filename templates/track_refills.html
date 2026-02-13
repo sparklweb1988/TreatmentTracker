@@ -15,31 +15,48 @@
 <h2>Refill Tracking</h2>
 
 <!-- FILTERS -->
-<form method="get" class="mb-3 d-flex gap-2 align-items-center">
-  <select name="facility" onchange="this.form.submit()" class="form-select w-auto">
-    <option value="">All Facilities</option>
-    {% for facility in facilities %}
-      <option value="{{ facility.id }}" {% if facility.id|stringformat:"s" == selected_facility %} selected {% endif %}>{{ facility.name }}</option>
-    {% endfor %}
-  </select>
+<form method="get" class="mb-3 row g-2 align-items-center">
+  <!-- Facility Filter -->
+  <div class="col-12 col-md-3">
+    <select name="facility" onchange="this.form.submit()" class="form-select">
+      <option value="">All Facilities</option>
+      {% for facility in facilities %}
+        <option value="{{ facility.id }}" {% if facility.id|stringformat:"s" == selected_facility %} selected {% endif %}>
+          {{ facility.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
 
-  <select name="case_manager" onchange="this.form.submit()" class="form-select w-auto">
-    <option value="">All Case Managers</option>
-    {% for manager in case_managers %}
-      <option value="{{ manager }}" {% if manager == selected_case_manager %} selected {% endif %}>{{ manager }}</option>
-    {% endfor %}
-  </select>
+  <!-- Case Manager Filter -->
+  <div class="col-12 col-md-3">
+    <select name="case_manager" onchange="this.form.submit()" class="form-select">
+      <option value="">All Case Managers</option>
+      {% for manager in case_managers %}
+        <option value="{{ manager }}" {% if manager == selected_case_manager %} selected {% endif %}>
+          {{ manager }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
 
   <!-- Start Date Filter -->
-  <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control w-auto">
+  <div class="col-12 col-md-2">
+    <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control">
+  </div>
 
   <!-- End Date Filter -->
-  <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control w-auto">
+  <div class="col-12 col-md-2">
+    <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control">
+  </div>
 
-  <button type="submit" class="btn btn-danger">Apply Filters</button>
+  <!-- Apply Button -->
+  <div class="col-12 col-md-2">
+    <button type="submit" class="btn btn-danger w-100">Apply Filters</button>
+  </div>
 </form>
 
-<!-- MOBILE CARDS -->
+<!-- ================= MOBILE CARDS ================= -->
 <div class="d-block d-md-none cards-container">
   {% for period in periods %}
     {% with period_name=period.0 refills=period.1 %}
@@ -76,14 +93,13 @@
               </ul>
             </nav>
           {% endif %}
-
         </div>
       </div>
     {% endwith %}
   {% endfor %}
 </div>
 
-<!-- DESKTOP TABLES -->
+<!-- ================= DESKTOP TABLES ================= -->
 <div class="d-none d-md-block">
   {% for period in periods %}
     {% with period_name=period.0 refills=period.1 %}
