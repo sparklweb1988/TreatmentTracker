@@ -213,6 +213,25 @@ def refill_list(request):
     # GET filters
     facility_id = request.GET.get("facility")
     selected_case_manager = request.GET.get("case_manager")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    # Parse start and end date if provided
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            start_date_obj = None
+    else:
+        start_date_obj = None
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            end_date_obj = None
+    else:
+        end_date_obj = None
 
     # All facilities
     facilities = Facility.objects.all()
@@ -230,6 +249,13 @@ def refill_list(request):
     # Filter by case manager if provided
     if selected_case_manager:
         refills = refills.filter(case_manager=selected_case_manager)
+
+    # Filter by date range if provided
+    if start_date_obj:
+        refills = refills.filter(next_appointment__gte=start_date_obj)
+
+    if end_date_obj:
+        refills = refills.filter(next_appointment__lte=end_date_obj)
 
     # Unique case managers for filter dropdown
     case_managers_qs = (
@@ -264,6 +290,8 @@ def refill_list(request):
         "case_managers": case_managers,
         "selected_case_manager": selected_case_manager,
         "today": today,
+        "selected_start_date": start_date,
+        "selected_end_date": end_date,
         "periods": [
             {"name": "Daily", "page_obj": daily_page.get_page(daily_number)},
             {"name": "Weekly", "page_obj": weekly_page.get_page(weekly_number)},
@@ -276,8 +304,6 @@ def refill_list(request):
         return export_refills_to_excel(refills)
 
     return render(request, "refill_list.html", context)
-
-
 
 
 
@@ -469,6 +495,25 @@ def track_refills(request):
     # Filters
     facility_id = request.GET.get("facility")
     selected_case_manager = request.GET.get("case_manager")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    # Parse start and end date if provided
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            start_date_obj = None
+    else:
+        start_date_obj = None
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            end_date_obj = None
+    else:
+        end_date_obj = None
 
     # All facilities
     facilities = Facility.objects.all()
@@ -485,6 +530,13 @@ def track_refills(request):
 
     if selected_case_manager:
         refills = refills.filter(case_manager=selected_case_manager)
+
+    # Filter by date range if provided
+    if start_date_obj:
+        refills = refills.filter(last_pickup_date__gte=start_date_obj)
+
+    if end_date_obj:
+        refills = refills.filter(last_pickup_date__lte=end_date_obj)
 
     # Group by period
     daily_qs = refills.filter(last_pickup_date=today).order_by('-last_pickup_date')
@@ -530,6 +582,8 @@ def track_refills(request):
         "case_managers": case_managers,
         "selected_case_manager": selected_case_manager,
         "today": today,
+        "selected_start_date": start_date,
+        "selected_end_date": end_date,
         "periods": periods,
     }
 
@@ -607,12 +661,15 @@ def daily_refill_list(request):
 
 
 
+
 def missed_refills(request):
     today = timezone.now().date()
 
     # GET filter parameters
     facility_id = request.GET.get("facility")
     case_manager = request.GET.get("case_manager")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
 
     # Base queryset: Active patients only
     refills = Refill.objects.filter(
@@ -628,6 +685,21 @@ def missed_refills(request):
 
     if case_manager:
         refills = refills.filter(case_manager=case_manager)
+
+    # ================= DATE FILTER =================
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+            refills = refills.filter(next_appointment__gte=start_date_obj)
+        except ValueError:
+            pass  # ignore invalid date format
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+            refills = refills.filter(next_appointment__lte=end_date_obj)
+        except ValueError:
+            pass  # ignore invalid date format
 
     # ================= MISSED REFILLS LOGIC =================
     missed_list = (
@@ -709,6 +781,8 @@ def missed_refills(request):
         "case_managers": case_managers,
         "selected_facility": facility_id,
         "selected_case_manager": case_manager,
+        "selected_start_date": start_date,
+        "selected_end_date": end_date,
     }
 
     return render(request, "missed_refills.html", context)

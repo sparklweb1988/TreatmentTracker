@@ -28,6 +28,14 @@
       </option>
     {% endfor %}
   </select>
+
+  <!-- Start Date Filter -->
+  <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control w-auto">
+  
+  <!-- End Date Filter -->
+  <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control w-auto">
+
+  <button type="submit" class="btn btn-danger">Apply Filters</button>
 </form>
 
 <!-- ================= MOBILE CARDS ================= -->
@@ -50,37 +58,6 @@
       {% empty %}
       <small>No {{ period.name|lower }} expected refills</small>
       {% endfor %}
-
-      <!-- Mobile Pagination (unchanged) -->
-      {% if period.page_obj.has_other_pages %}
-        <nav aria-label="{{ period.name }} refills pagination">
-          <ul class="pagination justify-content-center">
-            {% if period.page_obj.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?{{ period.name|lower }}_page={{ period.page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}" aria-label="Previous">&laquo;</a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-            {% endif %}
-            {% for num in period.page_obj.paginator.page_range %}
-              {% if period.page_obj.number == num %}
-              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-              {% elif num > period.page_obj.number|add:"-3" and num < period.page_obj.number|add:"3" %}
-              <li class="page-item">
-                <a class="page-link" href="?{{ period.name|lower }}_page={{ num }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">{{ num }}</a>
-              </li>
-              {% endif %}
-            {% endfor %}
-            {% if period.page_obj.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?{{ period.name|lower }}_page={{ period.page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}" aria-label="Next">&raquo;</a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-            {% endif %}
-          </ul>
-        </nav>
-      {% endif %}
     </div>
   </div>
   {% endfor %}
@@ -128,41 +105,11 @@
       {% endfor %}
     </tbody>
   </table>
-
-  <!-- Desktop Pagination (unchanged) -->
-  {% if period.page_obj.has_other_pages %}
-    <nav aria-label="{{ period.name }} refills pagination">
-      <ul class="pagination justify-content-center">
-        {% if period.page_obj.has_previous %}
-        <li class="page-item">
-          <a class="page-link" href="?{{ period.name|lower }}_page={{ period.page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}" aria-label="Previous">&laquo;</a>
-        </li>
-        {% else %}
-        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-        {% endif %}
-        {% for num in period.page_obj.paginator.page_range %}
-          {% if period.page_obj.number == num %}
-          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-          {% elif num > period.page_obj.number|add:"-3" and num < period.page_obj.number|add:"3" %}
-          <li class="page-item">
-            <a class="page-link" href="?{{ period.name|lower }}_page={{ num }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">{{ num }}</a>
-          </li>
-          {% endif %}
-        {% endfor %}
-        {% if period.page_obj.has_next %}
-        <li class="page-item">
-          <a class="page-link" href="?{{ period.name|lower }}_page={{ period.page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}" aria-label="Next">&raquo;</a>
-        </li>
-        {% else %}
-        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-        {% endif %}
-      </ul>
-    </nav>
-  {% endif %}
   {% endfor %}
 </div>
 
 <br><br>
-<a href="{% url 'refill_list' %}?download=true&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}" class="btn btn-success">Download Refills as Excel</a>
+<a href="{% url 'refill_list' %}?download=true&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}" class="btn btn-success">Download Refills as Excel</a>
 <br><br>
-{% endblock content %}
+
+{% endblock %}

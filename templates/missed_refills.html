@@ -37,6 +37,16 @@
             </select>
         </div>
 
+        <!-- Start Date Filter -->
+        <div class="col-md-4 mb-2">
+            <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control">
+        </div>
+
+        <!-- End Date Filter -->
+        <div class="col-md-4 mb-2">
+            <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control">
+        </div>
+
         <div class="col-md-4 mb-2">
             <button type="submit" class="btn btn-danger w-100">
                 Apply Filters
@@ -96,8 +106,6 @@
                             </span>
                         </td>
                         <td>
-                            {% if refill.missed_appointment %}<span class="badge bg-danger">Missed
-                                Appointment</span><br>{% endif %}
                             <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}"
                                 class="btn btn-primary btn-sm">Add Refills</a>
                         </td>
@@ -181,13 +189,13 @@
             {% if page_obj.has_previous %}
             <li class="page-item">
                 <a class="page-link"
-                    href="?page=1&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    href="?page=1&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}">
                     &laquo; First
                 </a>
             </li>
             <li class="page-item">
                 <a class="page-link"
-                    href="?page={{ page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    href="?page={{ page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}">
                     Previous
                 </a>
             </li>
@@ -202,13 +210,13 @@
             {% if page_obj.has_next %}
             <li class="page-item">
                 <a class="page-link"
-                    href="?page={{ page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    href="?page={{ page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}">
                     Next
                 </a>
             </li>
             <li class="page-item">
                 <a class="page-link"
-                    href="?page={{ page_obj.paginator.num_pages }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                    href="?page={{ page_obj.paginator.num_pages }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}">
                     Last &raquo;
                 </a>
             </li>
@@ -219,7 +227,7 @@
 
     <!-- ================= EXPORT BUTTON ================= -->
     <div class="text-center mt-3">
-        <a href="?export=excel&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}"
+        <a href="?export=excel&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}"
             class="btn btn-success">
             Download Excel
         </a>

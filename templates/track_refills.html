@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+
 {% block content %}
 <style>
   .overdue { background-color: #f8d7da !important; }
@@ -28,6 +29,14 @@
       <option value="{{ manager }}" {% if manager == selected_case_manager %} selected {% endif %}>{{ manager }}</option>
     {% endfor %}
   </select>
+
+  <!-- Start Date Filter -->
+  <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control w-auto">
+
+  <!-- End Date Filter -->
+  <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control w-auto">
+
+  <button type="submit" class="btn btn-danger">Apply Filters</button>
 </form>
 
 <!-- MOBILE CARDS -->
@@ -135,6 +144,7 @@
 </div>
 
 <br><br>
-<a href="{% url 'track_refills' %}?download=true&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}" class="btn btn-success">Download Track Refills as Excel</a>
+<a href="{% url 'track_refills' %}?download=true&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}" class="btn btn-success">Download Track Refills as Excel</a>
 <br><br>
+
 {% endblock %}
