@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- ================= HEADER ================= -->
+    <h3 class="mb-4 text-danger">
+        Missed Refills - {{ today|date:"F Y" }}
+        <span class="badge bg-danger ms-2">
+            {{ total_missed }}
+        </span>
+    </h3>
+
+    <!-- ================= FILTERS ================= -->
+    <form method="get" class="row mb-4">
+
+        <div class="col-md-4 mb-2">
+            <select name="facility" class="form-select">
+                <option value="">All Facilities</option>
+                {% for facility in facilities %}
+                    <option value="{{ facility.id }}"
+                        {% if selected_facility == facility.id|stringformat:"s" %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ facility.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4 mb-2">
+            <select name="case_manager" class="form-select">
+                <option value="">All Case Managers</option>
+                {% for manager in case_managers %}
+                    <option value="{{ manager }}"
+                        {% if selected_case_manager == manager %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ manager }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4 mb-2">
+            <button type="submit" class="btn btn-danger w-100">
+                Apply Filters
+            </button>
+        </div>
+
+    </form>
+
+    <!-- ================= DESKTOP TABLE ================= -->
+    <div class="card shadow d-none d-md-block">
+        <div class="card-body table-responsive">
+
+            <table class="table table-bordered table-striped table-hover align-middle">
+                <thead class="table-danger">
+                    <tr>
+                        <th>#</th>
+                        <th>Unique ID</th>
+                        <th>Facility</th>
+                        <th>Case Manager</th>
+                        <th>Last Pickup</th>
+                        <th>Next Appointment</th>
+                        <th>Days Missed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for refill in page_obj %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="fw-bold">{{ refill.unique_id }}</td>
+                        <td>{{ refill.facility.name }}</td>
+                        <td>
+                            {{ refill.case_manager|default:"Not Assigned" }}
+                        </td>
+
+                        <td>
+                            {% if refill.last_pickup_date %}
+                                {{ refill.last_pickup_date }}
+                            {% else %}
+                                <span class="text-danger">Never Picked</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ refill.next_appointment }}</td>
+
+                        <td>
+                            <span class="
+                                {% if refill.days_missed > 30 %}
+                                    badge bg-danger
+                                {% elif refill.days_missed > 7 %}
+                                    badge bg-warning text-dark
+                                {% else %}
+                                    badge bg-secondary
+                                {% endif %}
+                            ">
+                                {{ refill.days_missed }} days
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-success">
+                            No missed refills this month 🎉
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+    <!-- ================= MOBILE CARDS ================= -->
+    <div class="d-md-none">
+        {% for refill in page_obj %}
+        <div class="card shadow-sm mb-3 border-danger">
+            <div class="card-body">
+
+                <h6 class="fw-bold text-danger">
+                    {{ refill.unique_id }}
+                </h6>
+
+                <p class="text-muted mb-1">
+                    {{ refill.facility.name }}
+                </p>
+
+                <hr>
+
+                <p class="mb-1">
+                    <strong>Case Manager:</strong><br>
+                    {{ refill.case_manager|default:"Not Assigned" }}
+                </p>
+
+                <p class="mb-1">
+                    <strong>Last Pickup:</strong><br>
+                    {% if refill.last_pickup_date %}
+                        {{ refill.last_pickup_date }}
+                    {% else %}
+                        <span class="text-danger">Never Picked</span>
+                    {% endif %}
+                </p>
+
+                <p class="mb-1">
+                    <strong>Next Appointment:</strong><br>
+                    {{ refill.next_appointment }}
+                </p>
+
+                <p class="mb-0">
+                    <strong>Days Missed:</strong><br>
+                    <span class="
+                        {% if refill.days_missed > 30 %}
+                            badge bg-danger
+                        {% elif refill.days_missed > 7 %}
+                            badge bg-warning text-dark
+                        {% else %}
+                            badge bg-secondary
+                        {% endif %}
+                    ">
+                        {{ refill.days_missed }} days
+                    </span>
+                </p>
+
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-success text-center">
+            No missed refills this month 🎉
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ================= PAGINATION ================= -->
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page=1&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                        &laquo; First
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                        Previous
+                    </a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                        Next
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.paginator.num_pages }}&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}">
+                        Last &raquo;
+                    </a>
+                </li>
+            {% endif %}
+
+        </ul>
+    </nav>
+
+    <!-- ================= EXPORT BUTTON ================= -->
+    <div class="text-center mt-3">
+        <a href="?export=excel&facility={{ selected_facility }}&case_manager={{ selected_case_manager }}"
+           class="btn btn-success">
+            Download Excel
+        </a>
+    </div>
+
+</div>
+
+<br><br>
+
+{% endblock %}

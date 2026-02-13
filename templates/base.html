@@ -72,12 +72,7 @@
                             </a>
                         </li>
 
-                        <!-- <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'refill_add' %}active{% endif %}"
-                                href="{% url 'refill_add' %}">
-                                Add Refill
-                            </a>
-                        </li> -->
+
 
 
                         <!-- New Link for Daily Refills -->
@@ -94,6 +89,15 @@
                             <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
                                 href="{% url 'track_refills' %}">
                                 Track Refills
+                            </a>
+                        </li>
+
+
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'refill_add' %}active{% endif %}"
+                                href="{% url 'missed_refills' %}">
+                                Missed Refills
                             </a>
                         </li>
 

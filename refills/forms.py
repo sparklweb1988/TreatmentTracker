@@ -1,8 +1,9 @@
 from django import forms
 from .models import Refill, Facility
 
-
-
+# -----------------------
+# Refill Form (existing)
+# -----------------------
 class RefillForm(forms.ModelForm):
     class Meta:
         model = Refill
@@ -27,21 +28,21 @@ class RefillForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Unique ID dropdown - get unique values in Python
+        # Unique ID dropdown
         unique_ids = list({ref.unique_id for ref in Refill.objects.all()})
         self.fields['unique_id'] = forms.ChoiceField(
             choices=[('', 'Select Unique ID')] + [(uid, uid) for uid in unique_ids],
             widget=forms.Select(attrs={'class': 'form-select'})
         )
 
-        # Current Regimen dropdown - unique values
+        # Current Regimen dropdown
         regimens = list({ref.current_regimen for ref in Refill.objects.all() if ref.current_regimen})
         self.fields['current_regimen'] = forms.ChoiceField(
             choices=[('', 'Select Regimen')] + [(r, r) for r in regimens],
             widget=forms.Select(attrs={'class': 'form-select'})
         )
 
-        # Case Manager dropdown - unique values
+        # Case Manager dropdown
         case_managers = list({ref.case_manager for ref in Refill.objects.all() if ref.case_manager})
         self.fields['case_manager'] = forms.ChoiceField(
             choices=[('', 'Select Case Manager')] + [(c, c) for c in case_managers],
@@ -49,15 +50,16 @@ class RefillForm(forms.ModelForm):
         )
 
 
-
-
-
-
+# -----------------------
+# Excel Upload Form (updated)
+# -----------------------
 class UploadExcelForm(forms.Form):
     facility = forms.ModelChoiceField(
         queryset=Facility.objects.all(),
+        required=False,  # Allows "All Facilities"
+        empty_label="All Facilities",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     file = forms.FileField(
-        widget=forms.FileInput(attrs={'class': 'form-control'})
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
     )

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="row justify-content-center">
+<div class="row justify-content-center mt-4">
     <div class="col-lg-6">
 
         <div class="card shadow-sm border-0">
@@ -10,34 +10,62 @@
             </div>
 
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
+                <form id="upload-form" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
+                    <!-- Facility Selection -->
                     <div class="mb-3">
                         <label class="form-label">Select Facility</label>
                         {{ form.facility }}
+                        <div class="form-text">
+                            Leave as "All Facilities" to import multiple facilities from Excel.
+                        </div>
                     </div>
 
+                    <!-- Excel File Input -->
                     <div class="mb-3">
                         <label class="form-label">Excel File</label>
                         {{ form.file }}
+                        <div class="form-text">
+                            Maximum file size: 1 GB.
+                        </div>
                     </div>
 
-                    <!-- Display error if there is one -->
+                    <!-- Display Error -->
                     {% if error %}
                     <div class="alert alert-danger">
                         {{ error }}
                     </div>
                     {% endif %}
 
-                    <button type="submit" class="btn btn-primary w-100">
+                    <!-- Submit Button -->
+                    <button id="submit-btn" type="submit" class="btn btn-primary w-100">
                         Upload File
                     </button>
+
+                    <!-- Spinner (hidden by default) -->
+                    <div id="loading-spinner" class="text-center mt-3" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Uploading...</span>
+                        </div>
+                        <div class="mt-2">Uploading and processing, please wait...</div>
+                    </div>
+
                 </form>
             </div>
         </div>
 
     </div>
 </div>
+
+<!-- JavaScript to show spinner on submit -->
+<script>
+document.getElementById('upload-form').addEventListener('submit', function() {
+    // Hide submit button to prevent multiple clicks
+    document.getElementById('submit-btn').style.display = 'none';
+    // Show spinner
+    document.getElementById('loading-spinner').style.display = 'block';
+});
+</script>
 
 {% endblock %}

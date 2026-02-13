@@ -1,6 +1,6 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends 'base.html' %}
 
+{% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
 
@@ -8,9 +8,9 @@
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
                     {% if form.instance.pk %}
-                        Update Refill Record
+                    Update Refill Record
                     {% else %}
-                        Add New Refill
+                    Add New Refill
                     {% endif %}
                 </h5>
             </div>
@@ -21,7 +21,6 @@
                     {% csrf_token %}
 
                     <div class="row">
-
                         <!-- Facility -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Facility</label>
@@ -70,18 +69,18 @@
                             {{ form.remark }}
                         </div>
 
-                        <!-- Next Appointment (read-only) -->
+                        <!-- Next Appointment -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Next Appointment</label>
-                            <input type="text" class="form-control" value="{{ form.instance.next_appointment }}" readonly>
+                            <input type="text" class="form-control"
+                                value="{{ form.instance.next_appointment|date:'Y-m-d' }}" readonly>
                         </div>
 
-                        <!-- Expected IIT Date (read-only) -->
-                        <div class="col-md-6 mb-3">
+                        <!-- Expected IIT Date -->
+                        <!-- <div class="col-md-6 mb-3">
                             <label class="form-label">Expected IIT Date</label>
-                            <input type="text" class="form-control" value="{{ form.instance.expected_iit_date }}" readonly>
-                        </div>
-
+                            <input type="text" class="form-control" value="{{ form.instance.expected_iit_date|date:'Y-m-d' }}" readonly>
+                        </div> -->
                     </div>
 
                     <div class="d-flex justify-content-between mt-3">
@@ -92,13 +91,9 @@
                             Save Record
                         </button>
                     </div>
-
                 </form>
-
             </div>
         </div>
-
     </div>
 </div>
-
 {% endblock %}

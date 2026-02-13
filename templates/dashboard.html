@@ -29,7 +29,7 @@
         <div class="col-md-3">
             <div class="card text-white bg-primary mb-3">
                 <div class="card-body">
-                    <h5 class="card-title">Daily Expected</h5>
+                    <h5 class="card-title">Today's Expected</h5>
                     <h3 class="card-text">{{ daily_expected.count }}</h3>
                 </div>
             </div>
@@ -39,22 +39,21 @@
         <div class="col-md-3">
             <div class="card text-white bg-success mb-3">
                 <div class="card-body">
-                    <h5 class="card-title">Daily Refills</h5>
+                    <h5 class="card-title">Today's Refill</h5>
                     <h3 class="card-text">{{ daily_refills.count }}</h3>
                 </div>
             </div>
         </div>
 
-        <!-- Missed Refills -->
         <div class="col-md-3">
             <div class="card text-white bg-danger mb-3">
                 <div class="card-body">
-                    <h5 class="card-title">Missed Refills</h5>
-                    <h3 class="card-text">{{ missed_refills }}</h3>
+                    <h5 class="card-title">Total Missed This Month</h5>
+                    <h3 class="card-text">{{ monthly_missed_total }}</h3>
                 </div>
             </div>
         </div>
-
+        
         <!-- Weekly Expected -->
         <div class="col-md-3">
             <div class="card text-white bg-info mb-3">
