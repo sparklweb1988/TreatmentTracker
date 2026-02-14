@@ -674,6 +674,8 @@ def daily_refill_list(request):
 
 
 
+
+
 def missed_refills(request):
     today = timezone.now().date()
 
@@ -686,7 +688,7 @@ def missed_refills(request):
     # ================= BASE QUERYSET =================
     refills = Refill.objects.filter(
         current_art_status__in=["Active", "Active Restart"]
-    )
+    ).select_related("facility")  # optimize facility access
 
     # ================= FILTERS =================
     if facility_id:
@@ -714,22 +716,24 @@ def missed_refills(request):
             pass
 
     # ================= MISSED REFILLS LOGIC =================
-    missed_list = (
-        refills.filter(next_appointment__lt=today)
-        .filter(
-            Q(last_pickup_date__lt=F("next_appointment")) |
-            Q(last_pickup_date__isnull=True)
-        )
-        .select_related("facility")
-        .order_by("next_appointment")
-    )
+    missed_list = refills.filter(next_appointment__lt=today).filter(
+        Q(last_pickup_date__lt=F("next_appointment")) | Q(last_pickup_date__isnull=True)
+    ).order_by("next_appointment")
 
-    # ================= CALCULATIONS =================
+    # ================= CALCULATE DAYS MISSED AND IIT STATUS =================
     for refill in missed_list:
         if refill.next_appointment:
             refill.days_missed = (today - refill.next_appointment).days
         else:
             refill.days_missed = 0
+
+        # IIT Status Logic
+        if refill.days_missed >= 28:
+            refill.iit_status = "IIT"
+        elif refill.days_missed > 0:
+            refill.iit_status = f"{refill.days_missed} days overdue"
+        else:
+            refill.iit_status = "0"
 
     total_missed = missed_list.count()
 
@@ -745,14 +749,14 @@ def missed_refills(request):
         .values_list("case_manager", flat=True)
         .distinct()
     )
-    case_managers = sorted(set(cm.strip() for cm in case_managers_qs if cm.strip()))
+    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
 
     # ================= CONTEXT =================
     context = {
         "page_obj": page_obj,
         "today": today,
         "total_missed": total_missed,
-        "facilities": Facility.objects.all(),  # ✅ corrected to full Facility objects
+        "facilities": Facility.objects.all(),  # pass full facility objects
         "case_managers": case_managers,
         "selected_facility": facility_id,
         "selected_case_manager": case_manager,
@@ -761,7 +765,6 @@ def missed_refills(request):
     }
 
     return render(request, "missed_refills.html", context)
-
     # ================= EXPORT TO EXCEL =================
     if request.GET.get("export") == "excel":
         workbook = Workbook()
