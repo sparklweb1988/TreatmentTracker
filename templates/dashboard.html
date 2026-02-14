@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+ {% extends 'base.html' %}
 
 {% block content %}
 <div class="container mt-4">
@@ -45,6 +45,7 @@
             </div>
         </div>
 
+        <!-- Total Missed This Month -->
         <div class="col-md-3">
             <div class="card text-white bg-danger mb-3">
                 <div class="card-body">
@@ -53,7 +54,17 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- 🔥 IIT Patients (NEW CARD) -->
+        <div class="col-md-3">
+            <div class="card text-white bg-dark mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">IIT (≥ 28 Days)</h5>
+                    <h3 class="card-text">{{ iit_total }}</h3>
+                </div>
+            </div>
+        </div>
+
         <!-- Weekly Expected -->
         <div class="col-md-3">
             <div class="card text-white bg-info mb-3">
@@ -64,12 +75,32 @@
             </div>
         </div>
 
+        <!-- Weekly Refills -->
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Weekly Refills</h5>
+                    <h3 class="card-text">{{ weekly_refills.count }}</h3>
+                </div>
+            </div>
+        </div>
+
         <!-- Monthly Expected -->
         <div class="col-md-3">
             <div class="card text-white bg-warning mb-3">
                 <div class="card-body">
                     <h5 class="card-title">Monthly Expected</h5>
                     <h3 class="card-text">{{ monthly_expected.count }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Refills -->
+        <div class="col-md-3">
+            <div class="card text-white bg-dark border-warning mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Monthly Refills</h5>
+                    <h3 class="card-text">{{ monthly_refills.count }}</h3>
                 </div>
             </div>
         </div>
