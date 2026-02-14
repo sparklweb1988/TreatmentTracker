@@ -676,6 +676,8 @@ def daily_refill_list(request):
 
 
 
+
+
 def missed_refills(request):
     today = timezone.now().date()
 
@@ -723,16 +725,18 @@ def missed_refills(request):
     # ================= CALCULATE DAYS MISSED AND IIT STATUS =================
     for refill in missed_list:
         if refill.next_appointment:
-            refill.days_missed = (today - refill.next_appointment).days
+            days_missed = (today - refill.next_appointment).days
+            refill.days_missed = days_missed
+
+            if days_missed >= 28:
+                refill.iit_status = "IIT"
+            elif days_missed > 0:
+                days_remaining = 28 - days_missed
+                refill.iit_status = f"{days_remaining} days to IIT"
+            else:
+                refill.iit_status = "0"
         else:
             refill.days_missed = 0
-
-        # IIT Status Logic
-        if refill.days_missed >= 28:
-            refill.iit_status = "IIT"
-        elif refill.days_missed > 0:
-            refill.iit_status = f"{refill.days_missed} days overdue"
-        else:
             refill.iit_status = "0"
 
     total_missed = missed_list.count()
@@ -756,7 +760,7 @@ def missed_refills(request):
         "page_obj": page_obj,
         "today": today,
         "total_missed": total_missed,
-        "facilities": Facility.objects.all(),  # pass full facility objects
+        "facilities": Facility.objects.all(),  # full facility objects for dropdown
         "case_managers": case_managers,
         "selected_facility": facility_id,
         "selected_case_manager": case_manager,
