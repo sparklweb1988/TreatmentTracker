@@ -121,6 +121,7 @@ def import_refills_from_excel(file, facility=None):
 
 
 
+
 def dashboard(request):
     today = timezone.now().date()
     week_end = today + timedelta(days=7)
@@ -152,6 +153,21 @@ def dashboard(request):
         Q(last_pickup_date__isnull=True)
     ).count()
 
+    # ================= IIT COUNT (≥ 28 DAYS MISSED) =================
+    iit_queryset = refills.filter(
+        next_appointment__lt=today
+    ).filter(
+        Q(last_pickup_date__lt=F('next_appointment')) |
+        Q(last_pickup_date__isnull=True)
+    )
+
+    iit_total = 0
+    for refill in iit_queryset:
+        if refill.next_appointment:
+            days_missed = (today - refill.next_appointment).days
+            if days_missed >= 28:
+                iit_total += 1
+
     context = {
         "facilities": facilities,
         "selected_facility": facility_id,
@@ -174,14 +190,16 @@ def dashboard(request):
             last_pickup_date__month=today.month
         ),
 
-        # ✅ NEW CARD VALUE
+        # Existing Card
         "monthly_missed_total": monthly_missed_total,
+
+        # 🔥 NEW IIT CARD VALUE
+        "iit_total": iit_total,
 
         "today": today
     }
 
     return render(request, "dashboard.html", context)
-
 
 
 # ================================
