@@ -674,10 +674,6 @@ def daily_refill_list(request):
 
 
 
-
-
-
-
 def missed_refills(request):
     today = timezone.now().date()
 
@@ -732,20 +728,8 @@ def missed_refills(request):
     for refill in missed_list:
         if refill.next_appointment:
             refill.days_missed = (today - refill.next_appointment).days
-
-            # IIT Logic
-            if refill.days_missed >= 28:
-                refill.iit_status = "IIT"
-            else:
-                days_remaining = 28 - refill.days_missed
-
-                if days_remaining <= 5:
-                    refill.iit_status = f"{days_remaining} days to become IIT"
-                else:
-                    refill.iit_status = f"{days_remaining} days to IIT"
         else:
             refill.days_missed = 0
-            refill.iit_status = "-"
 
     total_missed = missed_list.count()
 
@@ -756,14 +740,11 @@ def missed_refills(request):
 
     # ================= UNIQUE CASE MANAGERS =================
     case_managers_qs = (
-        Refill.objects
-        .exclude(case_manager__isnull=True)
+        Refill.objects.exclude(case_manager__isnull=True)
         .exclude(case_manager__exact="")
         .values_list("case_manager", flat=True)
         .distinct()
     )
-
-    # Clean whitespace & prevent hidden duplicates
     case_managers = sorted(set(cm.strip() for cm in case_managers_qs if cm.strip()))
 
     # ================= CONTEXT =================
@@ -771,7 +752,7 @@ def missed_refills(request):
         "page_obj": page_obj,
         "today": today,
         "total_missed": total_missed,
-        "facilities": refills.values_list("facility", flat=False).distinct(),
+        "facilities": Facility.objects.all(),  # ✅ corrected to full Facility objects
         "case_managers": case_managers,
         "selected_facility": facility_id,
         "selected_case_manager": case_manager,
