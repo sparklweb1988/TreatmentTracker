@@ -3,7 +3,7 @@
 {% block content %}
 <style>
   .overdue { background-color: #f8d7da !important; }
-  .iit-approaching { background-color: #fff3cd !important; } /* yellow */
+  .iit-approaching { background-color: #fff3cd !important; }
   .cards-container { display: flex; flex-direction: column; gap: 1rem; }
   .refill-card { padding: 1rem; }
   .refill-card small { display: block; margin-bottom: 0.5rem; }
@@ -34,12 +34,10 @@
   </div>
 
   <div class="col-12 col-md-2">
-    <!-- Start Date Filter -->
     <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control">
   </div>
   
   <div class="col-12 col-md-2">
-    <!-- End Date Filter -->
     <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control">
   </div>
 
@@ -56,12 +54,31 @@
       <h5>{{ period.name }} Expected ({{ period.page_obj.paginator.count }})</h5>
       {% for refill in period.page_obj %}
       <small class=" 
-        {% if refill.next_appointment and refill.next_appointment < today %}overdue{% elif refill.expected_iit_date and refill.expected_iit_date <= today|add:'7' %}iit-approaching{% endif %}">
+        {% if refill.next_appointment and refill.next_appointment < today %}overdue{% elif refill.next_appointment and refill.next_appointment <= today|add:'7' %}iit-approaching{% endif %}">
+        
         {{ refill.unique_id }} | {{ refill.facility.name }}<br>
         Next: {{ refill.next_appointment|date:"Y-m-d" }} | Regimen: {{ refill.current_regimen }}<br>
         Case Manager: {{ refill.case_manager }}<br>
+
+        <!-- 🔥 IIT Prediction -->
+        IIT Prediction:
+        {% if refill.next_appointment and refill.next_appointment >= today %}
+            <span class="badge bg-success">0</span>
+        {% else %}
+            {% if refill.days_missed >= 28 %}
+                <span class="badge bg-dark">IIT</span>
+            {% else %}
+                <span class="badge bg-info text-dark">
+                    {{ refill.iit_status }}
+                </span>
+            {% endif %}
+        {% endif %}
+        <br>
+
         Action: 
-        {% if refill.missed_appointment %}<span class="badge bg-danger">Missed Appointment</span><br>{% endif %}
+        {% if refill.missed_appointment %}
+          <span class="badge bg-danger">Missed Appointment</span><br>
+        {% endif %}
         <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm">Add Refills</a>
       </small>
       <hr>
@@ -88,6 +105,7 @@
         <th class="text-danger">Next Appointment</th>
         <th>Regimen</th>
         <th>Case Manager</th>
+        <th>IIT Prediction</th> <!-- 🔥 NEW COLUMN -->
         <th>Action</th>
       </tr>
     </thead>
@@ -95,6 +113,7 @@
       {% for refill in period.page_obj %}
       <tr class=" 
         {% if refill.next_appointment and refill.next_appointment < today %}overdue{% elif refill.next_appointment and refill.next_appointment <= today|add:'7' %}iit-approaching{% endif %}">
+        
         <td>{{ refill.unique_id }}</td>
         <td>{{ refill.sex }}</td>
         <td>{{ refill.facility.name }}</td>
@@ -103,14 +122,32 @@
         <td>{{ refill.next_appointment|date:"Y-m-d" }}</td>
         <td>{{ refill.current_regimen }}</td>
         <td>{{ refill.case_manager }}</td>
+
+        <!-- 🔥 IIT Prediction Column -->
         <td>
-          {% if refill.missed_appointment %}<span class="badge bg-danger">Missed Appointment</span><br>{% endif %}
+          {% if refill.next_appointment and refill.next_appointment >= today %}
+              <span class="badge bg-success">0</span>
+          {% else %}
+              {% if refill.days_missed >= 28 %}
+                  <span class="badge bg-dark">IIT</span>
+              {% else %}
+                  <span class="badge bg-info text-dark">
+                      {{ refill.iit_status }}
+                  </span>
+              {% endif %}
+          {% endif %}
+        </td>
+
+        <td>
+          {% if refill.missed_appointment %}
+            <span class="badge bg-danger">Missed Appointment</span><br>
+          {% endif %}
           <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm">Add Refills</a>
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="9" class="text-center">No {{ period.name|lower }} expected refills</td>
+        <td colspan="10" class="text-center">No {{ period.name|lower }} expected refills</td>
       </tr>
       {% endfor %}
     </tbody>
