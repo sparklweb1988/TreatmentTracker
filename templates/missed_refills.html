@@ -140,6 +140,10 @@
                         ">{{ refill.days_missed }} days</span>
                     </p>
                     <p class="mb-0"><strong>IIT Status:</strong> <span class="badge bg-info text-dark">{{ refill.iit_status }}</span></p>
+                    Add Refills  <p>
+        
+                 <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm">Add Refills</a>
+               </p>
                 </div>
             </div>
         {% empty %}
