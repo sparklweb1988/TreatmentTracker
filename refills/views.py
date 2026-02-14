@@ -662,16 +662,18 @@ def daily_refill_list(request):
 
 
 
+
+
 def missed_refills(request):
     today = timezone.now().date()
 
-    # GET filter parameters
+    # ================= GET FILTER PARAMETERS =================
     facility_id = request.GET.get("facility")
     case_manager = request.GET.get("case_manager")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
 
-    # Base queryset: Active patients only
+    # ================= BASE QUERYSET =================
     refills = Refill.objects.filter(
         current_art_status__in=["Active", "Active Restart"]
     )
@@ -681,7 +683,7 @@ def missed_refills(request):
         try:
             refills = refills.filter(facility_id=int(facility_id))
         except ValueError:
-            pass  # ignore invalid input
+            pass
 
     if case_manager:
         refills = refills.filter(case_manager=case_manager)
@@ -692,47 +694,78 @@ def missed_refills(request):
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
             refills = refills.filter(next_appointment__gte=start_date_obj)
         except ValueError:
-            pass  # ignore invalid date format
+            pass
 
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
             refills = refills.filter(next_appointment__lte=end_date_obj)
         except ValueError:
-            pass  # ignore invalid date format
+            pass
 
     # ================= MISSED REFILLS LOGIC =================
     missed_list = (
-        refills.filter(
-            next_appointment__lt=today  # Appointment is in the past
-        )
+        refills.filter(next_appointment__lt=today)
         .filter(
-            Q(last_pickup_date__lt=F("next_appointment")) |  # Pickup after appointment
-            Q(last_pickup_date__isnull=True)  # No pickup yet
+            Q(last_pickup_date__lt=F("next_appointment")) |
+            Q(last_pickup_date__isnull=True)
         )
-        .select_related("facility")  # add "case_manager" if it's a FK
+        .select_related("facility")
         .order_by("next_appointment")
     )
 
-    # Calculate days_missed for display
+    # ================= CALCULATIONS =================
     for refill in missed_list:
         if refill.next_appointment:
             refill.days_missed = (today - refill.next_appointment).days
+
+            # IIT Logic
+            if refill.days_missed >= 28:
+                refill.iit_status = "IIT"
+            else:
+                days_remaining = 28 - refill.days_missed
+
+                if days_remaining <= 5:
+                    refill.iit_status = f"{days_remaining} days to become IIT"
+                else:
+                    refill.iit_status = f"{days_remaining} days to IIT"
         else:
             refill.days_missed = 0
+            refill.iit_status = "-"
 
     total_missed = missed_list.count()
+
+    # ================= PAGINATION =================
+    paginator = Paginator(missed_list, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     # ================= UNIQUE CASE MANAGERS =================
     case_managers_qs = (
         Refill.objects
         .exclude(case_manager__isnull=True)
-        .exclude(case_manager__exact="")  # exclude empty strings
+        .exclude(case_manager__exact="")
         .values_list("case_manager", flat=True)
         .distinct()
     )
-    # Strip spaces and remove duplicates
-    case_managers = sorted({cm.strip() for cm in case_managers_qs})
+
+    # Clean whitespace & prevent hidden duplicates
+    case_managers = sorted(set(cm.strip() for cm in case_managers_qs if cm.strip()))
+
+    # ================= CONTEXT =================
+    context = {
+        "page_obj": page_obj,
+        "today": today,
+        "total_missed": total_missed,
+        "facilities": refills.values_list("facility", flat=False).distinct(),
+        "case_managers": case_managers,
+        "selected_facility": facility_id,
+        "selected_case_manager": case_manager,
+        "selected_start_date": start_date,
+        "selected_end_date": end_date,
+    }
+
+    return render(request, "missed_refills.html", context)
 
     # ================= EXPORT TO EXCEL =================
     if request.GET.get("export") == "excel":
