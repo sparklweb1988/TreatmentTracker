@@ -63,14 +63,16 @@
         <!-- 🔥 IIT Prediction -->
         IIT Prediction:
         {% if refill.next_appointment and refill.next_appointment >= today %}
-            <span class="badge bg-success">0</span>
+            <span class="badge bg-secondary">0</span>
         {% else %}
             {% if refill.days_missed >= 28 %}
-                <span class="badge bg-dark">IIT</span>
+                <span class="badge bg-danger">IIT ({{ refill.days_missed }}d)</span>
+            {% elif refill.days_missed >= 14 %}
+                <span class="badge bg-warning text-dark">{{ refill.days_missed }}d High Risk</span>
+            {% elif refill.days_missed > 0 %}
+                <span class="badge bg-info text-dark">{{ refill.days_missed }}d Early Risk</span>
             {% else %}
-                <span class="badge bg-info text-dark">
-                    {{ refill.iit_status }}
-                </span>
+                <span class="badge bg-secondary">0</span>
             {% endif %}
         {% endif %}
         <br>
@@ -124,16 +126,18 @@
         <td>{{ refill.case_manager }}</td>
 
         <!-- 🔥 IIT Prediction Column -->
-        <td>
+        <td class="text-center">
           {% if refill.next_appointment and refill.next_appointment >= today %}
-              <span class="badge bg-success">0</span>
+              <span class="badge bg-secondary">0</span>
           {% else %}
               {% if refill.days_missed >= 28 %}
-                  <span class="badge bg-dark">IIT</span>
+                  <span class="badge bg-danger">IIT ({{ refill.days_missed }}d)</span>
+              {% elif refill.days_missed >= 14 %}
+                  <span class="badge bg-warning text-dark">{{ refill.days_missed }}d High Risk</span>
+              {% elif refill.days_missed > 0 %}
+                  <span class="badge bg-info text-dark">{{ refill.days_missed }}d Early Risk</span>
               {% else %}
-                  <span class="badge bg-info text-dark">
-                      {{ refill.iit_status }}
-                  </span>
+                  <span class="badge bg-secondary">0</span>
               {% endif %}
           {% endif %}
         </td>
