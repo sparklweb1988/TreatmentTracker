@@ -216,17 +216,11 @@ from django.utils import timezone
 
 
 
+
+
 def refill_list(request):
-    today = timezone.now().date()
+    today = datetime.now().date()
     week_end = today + timedelta(days=7)
-
-    # Current month range
-    month_start = today.replace(day=1)
-    month_end = (today.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-
-    # Previous month range
-    last_month_start = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
-    last_month_end = today.replace(day=1) - timedelta(days=1)
 
     # GET filters
     facility_id = request.GET.get("facility")
@@ -278,11 +272,10 @@ def refill_list(request):
         .values_list("case_manager", flat=True)
         .distinct()
     )
-    case_managers = sorted({cm.strip() for cm in case_managers_qs})
+    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
 
-    # ================= Calculate days_missed ONLY =================
+    # Calculate days missed and missed_appointment flag
     for refill in refills:
-        # If next_appointment exists and patient missed it
         if refill.next_appointment and (not refill.last_pickup_date or refill.last_pickup_date < refill.next_appointment):
             refill.days_missed = (today - refill.next_appointment).days
             refill.missed_appointment = True
@@ -293,10 +286,7 @@ def refill_list(request):
     # Group refills by period
     daily_expected = refills.filter(next_appointment=today)
     weekly_expected = refills.filter(next_appointment__range=[today, week_end])
-    monthly_expected = refills.filter(
-        next_appointment__year=today.year,
-        next_appointment__month=today.month
-    )
+    monthly_expected = refills.filter(next_appointment__year=today.year, next_appointment__month=today.month)
 
     # Pagination per period
     daily_page = Paginator(daily_expected.order_by("next_appointment"), 10)
@@ -331,12 +321,12 @@ def refill_list(request):
 
 
 def export_refills_to_excel(refills):
-    today = timezone.now().date()
+    today = datetime.now().date()
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Expected Refills Data"
 
-    headers = ['Unique ID', 'Facility', 'Sex', 'Current Regimen', 'Case Manager', 'Next Appointment']
+    headers = ['Unique ID', 'Facility', 'Sex', 'Current Regimen', 'Case Manager', 'Last Pickup', 'Next Appointment', 'Days Missed']
     ws.append(headers)
 
     for refill in refills:
@@ -350,15 +340,16 @@ def export_refills_to_excel(refills):
             refill.sex,
             refill.current_regimen,
             refill.case_manager or "",
-            next_appointment,
+            last_pickup_date.strftime("%Y-%m-%d") if last_pickup_date else "Never Picked",
+            next_appointment.strftime("%Y-%m-%d") if next_appointment else "",
+            getattr(refill, "days_missed", 0),
         ]
         ws.append(row)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="Expected_Refills.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="Expected_Refills_{today}.xlsx"'
     wb.save(response)
     return response
-
 
 
 
