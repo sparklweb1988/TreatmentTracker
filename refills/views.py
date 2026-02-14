@@ -235,21 +235,18 @@ def refill_list(request):
     end_date = request.GET.get("end_date")
 
     # Parse start and end date if provided
+    start_date_obj = None
+    end_date_obj = None
     if start_date:
         try:
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
         except ValueError:
-            start_date_obj = None
-    else:
-        start_date_obj = None
-
+            pass
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
         except ValueError:
-            end_date_obj = None
-    else:
-        end_date_obj = None
+            pass
 
     # All facilities
     facilities = Facility.objects.all()
@@ -271,7 +268,6 @@ def refill_list(request):
     # Filter by date range if provided
     if start_date_obj:
         refills = refills.filter(next_appointment__gte=start_date_obj)
-
     if end_date_obj:
         refills = refills.filter(next_appointment__lte=end_date_obj)
 
@@ -283,6 +279,21 @@ def refill_list(request):
         .distinct()
     )
     case_managers = sorted({cm.strip() for cm in case_managers_qs})
+
+    # ================= Calculate days_missed and IIT prediction =================
+    for refill in refills:
+        # If next_appointment exists and patient missed it
+        if refill.next_appointment and (not refill.last_pickup_date or refill.last_pickup_date < refill.next_appointment):
+            refill.days_missed = (today - refill.next_appointment).days
+            if refill.days_missed >= 28:
+                refill.iit_status = "IIT"
+            else:
+                refill.iit_status = f"{28 - refill.days_missed} days to IIT"
+            refill.missed_appointment = True
+        else:
+            refill.days_missed = 0
+            refill.iit_status = "0"
+            refill.missed_appointment = False
 
     # Group refills by period
     daily_expected = refills.filter(next_appointment=today)
@@ -322,7 +333,6 @@ def refill_list(request):
         return export_refills_to_excel(refills)
 
     return render(request, "refill_list.html", context)
-
 
 
 def export_refills_to_excel(refills):
