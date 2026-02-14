@@ -280,19 +280,14 @@ def refill_list(request):
     )
     case_managers = sorted({cm.strip() for cm in case_managers_qs})
 
-    # ================= Calculate days_missed and IIT prediction =================
+    # ================= Calculate days_missed ONLY =================
     for refill in refills:
         # If next_appointment exists and patient missed it
         if refill.next_appointment and (not refill.last_pickup_date or refill.last_pickup_date < refill.next_appointment):
             refill.days_missed = (today - refill.next_appointment).days
-            if refill.days_missed >= 28:
-                refill.iit_status = "IIT"
-            else:
-                refill.iit_status = f"{28 - refill.days_missed} days to IIT"
             refill.missed_appointment = True
         else:
             refill.days_missed = 0
-            refill.iit_status = "0"
             refill.missed_appointment = False
 
     # Group refills by period
