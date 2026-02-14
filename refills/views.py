@@ -812,13 +812,112 @@ def missed_refills(request):
         worksheet.append(headers)
 
         for refill in missed_list:
-            worksheet.append([  # Write data to worksheet
+from datetime import datetime, timedelta
+from django.db.models import Q, F
+from django.core.paginator import Paginator
+from django.http import HttpResponse
+from openpyxl import Workbook
+from django.utils import timezone
+from .models import Refill, Facility
+
+def missed_refills(request):
+    today = timezone.now().date()
+
+    # ================= GET FILTER PARAMETERS =================
+    facility_id = request.GET.get("facility")
+    case_manager = request.GET.get("case_manager")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    export_excel = request.GET.get("export") == "excel"
+
+    # ================= BASE QUERYSET =================
+    refills = Refill.objects.filter(
+        current_art_status__in=["Active", "Active Restart"]
+    ).select_related("facility")
+
+    # ================= FILTERS =================
+    if facility_id:
+        try:
+            refills = refills.filter(facility_id=int(facility_id))
+        except ValueError:
+            pass
+
+    if case_manager:
+        refills = refills.filter(case_manager=case_manager)
+
+    # ================= DATE FILTER =================
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+            refills = refills.filter(next_appointment__gte=start_date_obj)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+            refills = refills.filter(next_appointment__lte=end_date_obj)
+        except ValueError:
+            pass
+
+    # ================= MISSED REFILLS LOGIC =================
+    missed_list = refills.filter(next_appointment__lt=today).filter(
+        Q(last_pickup_date__lt=F("next_appointment")) | Q(last_pickup_date__isnull=True)
+    ).order_by("next_appointment")
+
+    # ================= CALCULATE DAYS MISSED & IIT =================
+    for refill in missed_list:
+        if refill.next_appointment:
+            refill.days_missed = (today - refill.next_appointment).days
+
+            # IIT logic
+            if refill.days_missed >= 28:
+                refill.iit_status = "IIT"
+            else:
+                days_remaining = 28 - refill.days_missed
+                refill.iit_status = f"{days_remaining} days to IIT"
+        else:
+            refill.days_missed = 0
+            refill.iit_status = "-"
+
+    total_missed = missed_list.count()
+
+    # ================= UNIQUE CASE MANAGERS =================
+    case_managers_qs = (
+        Refill.objects
+        .exclude(case_manager__isnull=True)
+        .exclude(case_manager__exact="")
+        .values_list("case_manager", flat=True)
+        .distinct()
+    )
+    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
+
+    # ================= EXPORT TO EXCEL =================
+    if export_excel:
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Missed Refills"
+
+        headers = [
+            "Unique ID",
+            "Case Manager",
+            "Facility",
+            "Last Pickup",
+            "Next Appointment",
+            "Days Missed",
+            "IIT Status",
+        ]
+        worksheet.append(headers)
+
+        for refill in missed_list:
+            worksheet.append([
                 refill.unique_id,
                 refill.case_manager or "",
                 refill.facility.name if refill.facility else "",
                 refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "Never Picked",
                 refill.next_appointment.strftime("%Y-%m-%d") if refill.next_appointment else "",
                 refill.days_missed,
+                refill.iit_status,
             ])
 
         response = HttpResponse(
@@ -829,7 +928,7 @@ def missed_refills(request):
         return response
 
     # ================= PAGINATION =================
-    paginator = Paginator(missed_list, 20)  # 20 per page
+    paginator = Paginator(missed_list, 25)  # 25 per page
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
