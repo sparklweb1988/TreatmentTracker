@@ -797,12 +797,6 @@ def missed_refills(request):
         ]
         worksheet.append(headers)
 
-        from datetime import datetime
-from django.utils import timezone
-from django.shortcuts import render
-from django.core.paginator import Paginator
-from django.db.models import Q, F
-from .models import Refill, Facility
 
 def missed_refills(request):
     today = timezone.now().date()
