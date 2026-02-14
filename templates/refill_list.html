@@ -60,23 +60,6 @@
         Next: {{ refill.next_appointment|date:"Y-m-d" }} | Regimen: {{ refill.current_regimen }}<br>
         Case Manager: {{ refill.case_manager }}<br>
 
-        <!-- 🔥 IIT Prediction -->
-        IIT Prediction:
-        {% if refill.next_appointment and refill.next_appointment >= today %}
-            <span class="badge bg-secondary">0</span>
-        {% else %}
-            {% if refill.days_missed >= 28 %}
-                <span class="badge bg-danger">IIT ({{ refill.days_missed }}d)</span>
-            {% elif refill.days_missed >= 14 %}
-                <span class="badge bg-warning text-dark">{{ refill.days_missed }}d High Risk</span>
-            {% elif refill.days_missed > 0 %}
-                <span class="badge bg-info text-dark">{{ refill.days_missed }}d Early Risk</span>
-            {% else %}
-                <span class="badge bg-secondary">0</span>
-            {% endif %}
-        {% endif %}
-        <br>
-
         Action: 
         {% if refill.missed_appointment %}
           <span class="badge bg-danger">Missed Appointment</span><br>
@@ -107,7 +90,6 @@
         <th class="text-danger">Next Appointment</th>
         <th>Regimen</th>
         <th>Case Manager</th>
-        <th>IIT Prediction</th> <!-- 🔥 NEW COLUMN -->
         <th>Action</th>
       </tr>
     </thead>
@@ -125,23 +107,6 @@
         <td>{{ refill.current_regimen }}</td>
         <td>{{ refill.case_manager }}</td>
 
-        <!-- 🔥 IIT Prediction Column -->
-        <td class="text-center">
-          {% if refill.next_appointment and refill.next_appointment >= today %}
-              <span class="badge bg-secondary">0</span>
-          {% else %}
-              {% if refill.days_missed >= 28 %}
-                  <span class="badge bg-danger">IIT ({{ refill.days_missed }}d)</span>
-              {% elif refill.days_missed >= 14 %}
-                  <span class="badge bg-warning text-dark">{{ refill.days_missed }}d High Risk</span>
-              {% elif refill.days_missed > 0 %}
-                  <span class="badge bg-info text-dark">{{ refill.days_missed }}d Early Risk</span>
-              {% else %}
-                  <span class="badge bg-secondary">0</span>
-              {% endif %}
-          {% endif %}
-        </td>
-
         <td>
           {% if refill.missed_appointment %}
             <span class="badge bg-danger">Missed Appointment</span><br>
@@ -151,7 +116,7 @@
       </tr>
       {% empty %}
       <tr>
-        <td colspan="10" class="text-center">No {{ period.name|lower }} expected refills</td>
+        <td colspan="9" class="text-center">No {{ period.name|lower }} expected refills</td>
       </tr>
       {% endfor %}
     </tbody>
