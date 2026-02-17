@@ -724,7 +724,6 @@ def daily_refill_list(request):
 
 
 
-
 def missed_refills(request):
     today = timezone.now().date()
 
@@ -776,11 +775,13 @@ def missed_refills(request):
             days_missed = (today - refill.next_appointment).days
             refill.days_missed = days_missed
 
+            iit_date = refill.next_appointment + timedelta(days=28)
+            days_to_iit = (iit_date - today).days
+
             if days_missed >= 28:
                 refill.iit_status = "IIT"
             elif days_missed > 0:
-                days_remaining = 28 - days_missed
-                refill.iit_status = f"{days_remaining} days to IIT"
+                refill.iit_status = f"{days_to_iit} days to IIT"
             else:
                 refill.iit_status = "0"
         else:
@@ -852,3 +853,4 @@ def missed_refills(request):
     }
 
     return render(request, "missed_refills.html", context)
+
