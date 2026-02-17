@@ -950,3 +950,51 @@ def missed_refills(request):
 
     return render(request, "missed_refills.html", context)
 
+
+
+# ================= EXPORT TO EXCEL =================
+if request.GET.get("export") == "excel":
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Missed Refills"
+
+    headers = [
+        "Unique ID",
+        "Case Manager",
+        "Facility",
+        "Last Pickup",
+        "Next Appointment",
+        "Days Missed",
+        "IIT Status",
+    ]
+    worksheet.append(headers)
+
+    # Make header bold
+    from openpyxl.styles import Font
+    for col in range(1, len(headers) + 1):
+        worksheet.cell(row=1, column=col).font = Font(bold=True)
+
+    for refill in missed_list:
+        worksheet.append([
+            refill.unique_id,
+            refill.case_manager or "",
+            refill.facility.name if refill.facility else "",
+            refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "",
+            refill.next_appointment.strftime("%Y-%m-%d") if refill.next_appointment else "",
+            refill.days_missed,
+            refill.iit_status,
+        ])
+
+    # Auto column width
+    for column_cells in worksheet.columns:
+        length = max(len(str(cell.value)) for cell in column_cells if cell.value)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = length + 4
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="missed_refills.xlsx"'
+    workbook.save(response)
+    return response
+
+
