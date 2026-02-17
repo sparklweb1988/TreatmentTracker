@@ -13,21 +13,12 @@
                 <form id="upload-form" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
-                    <!-- Facility Selection -->
-                    <div class="mb-3">
-                        <label class="form-label">Select Facility</label>
-                        {{ form.facility }}
-                        <div class="form-text">
-                            Leave as "All Facilities" to import multiple facilities from Excel.
-                        </div>
-                    </div>
-
                     <!-- Excel File Input -->
                     <div class="mb-3">
                         <label class="form-label">Excel File</label>
                         {{ form.file }}
                         <div class="form-text">
-                            Maximum file size: 1 GB.
+                            Maximum file size: 1 GB. The file can contain multiple facilities.
                         </div>
                     </div>
 
