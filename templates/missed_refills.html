@@ -1,77 +1,225 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<thead class="table-danger">
-    <tr>
-        <th>#</th>
-        <th>Unique ID</th>
-        <th>Facility</th>
-        <th>Case Manager</th>
-        <th>Last Pickup</th>
-        <th>Next Appointment</th>
-        <th>Days Missed</th>
-        <th>IIT Status</th>
-        <th>Action</th>
-    </tr>
-</thead>
-<tbody>
-    {% for refill in page_obj %}
-    <tr>
-        <td>{{ forloop.counter }}</td>
-        <td class="fw-bold">{{ refill.unique_id }}</td>
-        <td>{{ refill.facility.name }}</td>
-        <td>{{ refill.case_manager|default:"Not Assigned" }}</td>
+<style>
+  .overdue { background-color: #f8d7da !important; }
+  .iit-approaching { background-color: #fff3cd !important; }
+  .cards-container { display: flex; flex-direction: column; gap: 1rem; }
+  .refill-card { padding: 1rem; border-radius: 10px; }
+</style>
 
-        <td>
-            {% if refill.last_pickup_date %}
-                {{ refill.last_pickup_date }}
+<div class="container mt-4">
+
+<!-- ================= FILTERS ================= -->
+<form method="get" class="mb-4 row g-2 align-items-center">
+  <div class="col-12 col-md-3">
+    <select name="facility" onchange="this.form.submit()" class="form-select">
+      <option value="">All Facilities</option>
+      {% for facility in facilities %}
+        <option value="{{ facility.id }}"
+          {% if facility.id|stringformat:"s" == selected_facility %} selected {% endif %}>
+          {{ facility.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <select name="case_manager" onchange="this.form.submit()" class="form-select">
+      <option value="">All Case Managers</option>
+      {% for manager in case_managers %}
+        <option value="{{ manager }}"
+          {% if manager == selected_case_manager %} selected {% endif %}>
+          {{ manager }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-12 col-md-2">
+    <input type="date" name="start_date" value="{{ selected_start_date }}" class="form-control">
+  </div>
+
+  <div class="col-12 col-md-2">
+    <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control">
+  </div>
+
+  <div class="col-12 col-md-2">
+    <button type="submit" class="btn btn-danger w-100">Apply</button>
+  </div>
+</form>
+
+<!-- ================= MOBILE VIEW ================= -->
+<div class="d-block d-md-none cards-container">
+
+  {% for refill in page_obj %}
+  <div class="card refill-card shadow 
+      {% if refill.days_missed >= 28 %}border-danger
+      {% elif refill.days_missed > 7 %}border-warning
+      {% else %}border-secondary{% endif %}">
+      
+      <div class="card-body">
+
+        <h6 class="fw-bold text-danger">
+          {{ refill.unique_id }}
+        </h6>
+
+        <small><strong>Facility:</strong> {{ refill.facility.name }}</small>
+        <small><strong>Case Manager:</strong> {{ refill.case_manager|default:"Not Assigned" }}</small>
+
+        <small>
+          <strong>Last Pickup:</strong>
+          {% if refill.last_pickup_date %}
+            {{ refill.last_pickup_date|date:"Y-m-d" }}
+          {% else %}
+            <span class="text-danger">Never Picked</span>
+          {% endif %}
+        </small>
+
+        <small><strong>Next Appointment:</strong> {{ refill.next_appointment|date:"Y-m-d" }}</small>
+
+        <small>
+          <strong>Days Missed:</strong>
+          <span class="
+            {% if refill.days_missed >= 28 %}
+              badge bg-danger
+            {% elif refill.days_missed > 7 %}
+              badge bg-warning text-dark
             {% else %}
-                <span class="text-danger">Never Picked</span>
+              badge bg-secondary
             {% endif %}
-        </td>
+          ">
+            {{ refill.days_missed }} days
+          </span>
+        </small>
 
-        <td>{{ refill.next_appointment }}</td>
+        <small>
+          <strong>IIT Status:</strong>
+          <span class="
+            {% if refill.iit_status == 'IIT' %}
+              badge bg-danger
+            {% elif 'days to IIT' in refill.iit_status %}
+              badge bg-warning text-dark
+            {% else %}
+              badge bg-secondary
+            {% endif %}
+          ">
+            {{ refill.iit_status }}
+          </span>
+        </small>
 
-        <td>
-            <span class="
-                {% if refill.days_missed > 30 %}
-                    badge bg-danger
+        <div class="mt-2">
+          <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}"
+             class="btn btn-primary btn-sm w-100">
+             Add Refills
+          </a>
+        </div>
+
+      </div>
+  </div>
+  {% empty %}
+    <div class="alert alert-success text-center">
+      No missed refills this month 🎉
+    </div>
+  {% endfor %}
+
+</div>
+
+<!-- ================= DESKTOP TABLE ================= -->
+<div class="d-none d-md-block">
+  <div class="card shadow">
+    <div class="card-body table-responsive">
+      <table class="table table-striped table-hover table-bordered align-middle">
+        <thead class="table-danger text-center">
+          <tr>
+            <th>#</th>
+            <th>Unique ID</th>
+            <th>Facility</th>
+            <th>Case Manager</th>
+            <th>Last Pickup</th>
+            <th>Next Appointment</th>
+            <th>Days Missed</th>
+            <th>IIT Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for refill in page_obj %}
+          <tr class="
+            {% if refill.days_missed >= 28 %}
+              overdue
+            {% elif refill.days_missed > 7 %}
+              iit-approaching
+            {% endif %}
+          ">
+            <td>{{ forloop.counter }}</td>
+            <td class="fw-bold text-danger">{{ refill.unique_id }}</td>
+            <td>{{ refill.facility.name }}</td>
+            <td>{{ refill.case_manager|default:"Not Assigned" }}</td>
+
+            <td>
+              {% if refill.last_pickup_date %}
+                {{ refill.last_pickup_date|date:"Y-m-d" }}
+              {% else %}
+                <span class="text-danger">Never Picked</span>
+              {% endif %}
+            </td>
+
+            <td class="fw-bold">
+              {{ refill.next_appointment|date:"Y-m-d" }}
+            </td>
+
+            <td class="text-center">
+              <span class="
+                {% if refill.days_missed >= 28 %}
+                  badge bg-danger
                 {% elif refill.days_missed > 7 %}
-                    badge bg-warning text-dark
+                  badge bg-warning text-dark
                 {% else %}
-                    badge bg-secondary
+                  badge bg-secondary
                 {% endif %}
-            ">
+              ">
                 {{ refill.days_missed }} days
-            </span>
-        </td>
+              </span>
+            </td>
 
-        <td>
-            <span class="
-                {% if refill.iit_status == "IIT" %}
-                    badge bg-danger
-                {% elif "days to IIT" in refill.iit_status %}
-                    badge bg-warning text-dark
+            <td class="text-center">
+              <span class="
+                {% if refill.iit_status == 'IIT' %}
+                  badge bg-danger
+                {% elif 'days to IIT' in refill.iit_status %}
+                  badge bg-warning text-dark
                 {% else %}
-                    badge bg-secondary
+                  badge bg-secondary
                 {% endif %}
-            ">
+              ">
                 {{ refill.iit_status }}
-            </span>
-        </td>
+              </span>
+            </td>
 
-        <td>
-            <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}"
-                class="btn btn-primary btn-sm">Add Refills</a>
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="9" class="text-center text-success">
-            No missed refills this month 🎉
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
+            <td class="text-center">
+              <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}"
+                 class="btn btn-primary btn-sm">
+                 Add Refills
+              </a>
+            </td>
+          </tr>
+
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-success">
+              No missed refills this month 🎉
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
 
 {% endblock content %}
