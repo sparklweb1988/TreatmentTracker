@@ -951,7 +951,6 @@ def missed_refills(request):
     return render(request, "missed_refills.html", context)
 
 
-
 # ================= EXPORT TO EXCEL =================
 if request.GET.get("export") == "excel":
     workbook = Workbook()
