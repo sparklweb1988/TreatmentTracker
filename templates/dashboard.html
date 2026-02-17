@@ -27,53 +27,67 @@
 
         <!-- Daily Expected -->
         <div class="col-md-3">
-            <div class="card text-white bg-primary mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Today's Expected</h5>
-                    <h3 class="card-text">{{ daily_expected.count }}</h3>
+            <div class="card text-white bg-primary mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Today's Expected</h6>
+                    <h2 class="card-text">{{ daily_expected.count }}</h2>
                 </div>
             </div>
         </div>
 
         <!-- Daily Refills -->
         <div class="col-md-3">
-            <div class="card text-white bg-success mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Today's Refill</h5>
-                    <h3 class="card-text">{{ daily_refills.count }}</h3>
+            <div class="card text-white bg-success mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Today's Refill</h6>
+                    <h2 class="card-text">{{ daily_refills.count }}</h2>
                 </div>
             </div>
         </div>
 
+        <!-- Monthly Missed -->
         <div class="col-md-3">
-            <div class="card text-white bg-danger mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Total Missed This Month</h5>
-                    <h3 class="card-text">{{ monthly_missed_total }}</h3>
+            <div class="card text-white bg-danger mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Missed This Month</h6>
+                    <h2 class="card-text">{{ monthly_missed_total }}</h2>
                 </div>
             </div>
         </div>
-        
+
+        <!-- 🔥 NEW IIT CARD -->
+        <div class="col-md-3">
+            <div class="card text-white bg-dark mb-3 shadow border-danger">
+                <div class="card-body text-center">
+                    <h6 class="card-title">IIT (≥ 28 Days)</h6>
+                    <h2 class="card-text text-danger fw-bold">
+                        {{ iit_total }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+
         <!-- Weekly Expected -->
         <div class="col-md-3">
-            <div class="card text-white bg-info mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Weekly Expected</h5>
-                    <h3 class="card-text">{{ weekly_expected.count }}</h3>
+            <div class="card text-white bg-info mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Weekly Expected</h6>
+                    <h2 class="card-text">{{ weekly_expected.count }}</h2>
                 </div>
             </div>
         </div>
 
         <!-- Monthly Expected -->
         <div class="col-md-3">
-            <div class="card text-white bg-warning mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Monthly Expected</h5>
-                    <h3 class="card-text">{{ monthly_expected.count }}</h3>
+            <div class="card text-dark bg-warning mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Monthly Expected</h6>
+                    <h2 class="card-text">{{ monthly_expected.count }}</h2>
                 </div>
             </div>
         </div>
 
     </div>
+
 </div>
 {% endblock content %}
