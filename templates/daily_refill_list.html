@@ -51,7 +51,7 @@
         {% endif %}
         
         <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm mt-2">Add Refills</a>
-        <a href="{% url 'refill_edit' refill.pk %}" class="btn btn-warning btn-sm mt-2">Edit Refills</a>
+ 
       </div>
     </div>
   {% empty %}
@@ -98,7 +98,7 @@
               <span class="badge bg-danger">Missed Appointment</span><br>
             {% endif %}
             <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm">Add Refills</a>
-            <a href="{% url 'refill_edit' refill.pk %}" class="btn btn-warning btn-sm">Edit Refills</a>
+          
           </td>
         </tr>
         {% empty %}
