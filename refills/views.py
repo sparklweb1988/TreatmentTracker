@@ -14,28 +14,21 @@ from django.db.models import F, Q
 from django.core.paginator import Paginator
 from openpyxl import Workbook
 from datetime import datetime
-
+from .forms import UploadExcelForm
 
 
 
 VALID_REFILL_MONTHS = [1, 2, 3, 6]
 
 def import_refills_from_excel(file, facility=None):
-    """
-    Import refill data from an Excel file.
-    
-    If `facility` is provided, all rows are assigned to that facility.
-    Otherwise, facility is determined from the 'Facility Name' column in the Excel.
-    Existing refills are deleted per facility before re-uploading.
-    """
-  
 
-    # Check file size
     if file.size > settings.FILE_UPLOAD_MAX_MEMORY_SIZE:
         raise ValidationError("File size exceeds the maximum allowed limit of 1GB.")
 
-    # Read Excel
-    df = pd.read_excel(file)
+    file.seek(0)
+    from io import BytesIO
+    file_data = file.read()
+    df = pd.read_excel(BytesIO(file_data))
 
     required_columns = [
         'Unique Id',
@@ -47,53 +40,64 @@ def import_refills_from_excel(file, facility=None):
         'Current ART Status',
     ]
 
-    # If facility is None (All), require 'Facility Name' column
     if facility is None:
         required_columns.append('Facility Name')
 
-    # Check for required columns
     for col in required_columns:
         if col not in df.columns:
             raise ValidationError(f"Missing column: {col}")
 
-    # Filter only Active and Active Restart patients
     df = df[df['Current ART Status'].isin(['Active', 'Active Restart'])]
     if df.empty:
         raise ValidationError("No Active or Active Restart patients found.")
 
-    # Keep track of facilities we’ve already deleted to avoid duplicate deletions
-    deleted_facilities = set()
-
     with transaction.atomic():
         for _, row in df.iterrows():
-            # Determine which facility to assign
+
+            # Determine facility
             if facility:
                 facility_obj = facility
             else:
-                facility_name = row['Facility Name']
-                try:
-                    facility_obj = Facility.objects.get(name=facility_name)
-                except Facility.DoesNotExist:
-                    raise ValidationError(f"Facility '{facility_name}' does not exist.")
+                facility_name = str(row['Facility Name']).strip()
 
-            # Delete existing refills for this facility only once
-            if facility_obj.id not in deleted_facilities:
-                Refill.objects.filter(facility=facility_obj).delete()
-                deleted_facilities.add(facility_obj.id)
+                if not facility_name or facility_name.lower() == "nan":
+                    raise ValidationError(
+                        f"Missing Facility Name for Unique Id {row['Unique Id']}"
+                    )
+
+                try:
+                    facility_obj = Facility.objects.get(
+                        name__iexact=facility_name
+                    )
+                except Facility.DoesNotExist:
+                    raise ValidationError(
+                        f"Facility '{facility_name}' does not exist."
+                    )
+
+            # Validate Unique ID
+            unique_id = str(row.get('Unique Id', '')).strip()
+            if not unique_id:
+                raise ValidationError("Unique Id cannot be empty.")
 
             # Validate last pickup date
             if pd.isnull(row['Last Pickup Date (yyyy-mm-dd)']):
                 raise ValidationError(
-                    f"Missing Last Pickup Date for Unique Id {row['Unique Id']}"
+                    f"Missing Last Pickup Date for Unique Id {unique_id}"
                 )
-            last_pickup_date = pd.to_datetime(row['Last Pickup Date (yyyy-mm-dd)']).date()
+            last_pickup_date = pd.to_datetime(
+                row['Last Pickup Date (yyyy-mm-dd)']
+            ).date()
 
             # Validate months
-            months = int(row['Months of ARV Refill'])
+            try:
+                months = int(row['Months of ARV Refill'])
+            except Exception:
+                raise ValidationError(
+                    f"Invalid Months of ARV Refill for Unique Id {unique_id}"
+                )
             if months not in VALID_REFILL_MONTHS:
                 raise ValidationError(
-                    f"Invalid refill duration {months} months "
-                    f"for Unique Id {row['Unique Id']}. Allowed: 1, 2, 3, 6"
+                    f"Invalid refill duration {months} months for Unique Id {unique_id}. Allowed: 1, 2, 3, 6"
                 )
 
             refill_days = months * 30
@@ -102,21 +106,54 @@ def import_refills_from_excel(file, facility=None):
             # Create or update refill
             Refill.objects.update_or_create(
                 facility=facility_obj,
-                unique_id=row['Unique Id'],
+                unique_id=unique_id,
                 defaults={
                     'last_pickup_date': last_pickup_date,
                     'next_appointment': next_appointment,
                     'months_of_refill_days': refill_days,
-                    'current_regimen': row['Current ART Regimen'],
-                    'case_manager': row['Case Manager'],
-                    'sex': row['Sex'],
+                    'current_regimen': str(row.get('Current ART Regimen', '')).strip(),
+                    'case_manager': str(row.get('Case Manager', '')).strip(),
+                    'sex': str(row.get('Sex', '')).strip(),
                 }
             )
+
+
+def upload_excel(request):
+    if request.method == 'POST':
+        form = UploadExcelForm(request.POST, request.FILES)
+        excel_file = request.FILES.get('file')
+
+        MAX_FILE_SIZE = 1073741824  # 1GB
+
+        if excel_file and excel_file.size > MAX_FILE_SIZE:
+            return render(request, 'upload.html', {
+                'form': form,
+                'error': "File size exceeds the 1GB limit."
+            })
+
+        if form.is_valid():
+            facility = form.cleaned_data['facility']  # None means All
+            try:
+                import_refills_from_excel(excel_file, facility)
+                return redirect('refill_list')
+            except Exception as e:
+                return render(request, 'upload.html', {
+                    'form': form,
+                    'error': str(e)
+                })
+        else:
+            return render(request, 'upload.html', {'form': form})
+    else:
+        form = UploadExcelForm()
+
+    return render(request, 'upload.html', {'form': form})
+
 
 
 # ================================
 # DASHBOARD
 # ================================
+
 
 
 
@@ -152,6 +189,21 @@ def dashboard(request):
         Q(last_pickup_date__isnull=True)
     ).count()
 
+    # ================= IIT COUNT (≥ 28 DAYS MISSED) =================
+    iit_queryset = refills.filter(
+        next_appointment__lt=today
+    ).filter(
+        Q(last_pickup_date__lt=F('next_appointment')) |
+        Q(last_pickup_date__isnull=True)
+    )
+
+    iit_total = 0
+    for refill in iit_queryset:
+        if refill.next_appointment:
+            days_missed = (today - refill.next_appointment).days
+            if days_missed >= 28:
+                iit_total += 1
+
     context = {
         "facilities": facilities,
         "selected_facility": facility_id,
@@ -174,14 +226,16 @@ def dashboard(request):
             last_pickup_date__month=today.month
         ),
 
-        # ✅ NEW CARD VALUE
+        # Existing Card
         "monthly_missed_total": monthly_missed_total,
+
+        # 🔥 NEW IIT CARD VALUE
+        "iit_total": iit_total,
 
         "today": today
     }
 
     return render(request, "dashboard.html", context)
-
 
 
 # ================================
@@ -198,17 +252,11 @@ from django.utils import timezone
 
 
 
+
+
 def refill_list(request):
-    today = timezone.now().date()
+    today = datetime.now().date()
     week_end = today + timedelta(days=7)
-
-    # Current month range
-    month_start = today.replace(day=1)
-    month_end = (today.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-
-    # Previous month range
-    last_month_start = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
-    last_month_end = today.replace(day=1) - timedelta(days=1)
 
     # GET filters
     facility_id = request.GET.get("facility")
@@ -217,21 +265,18 @@ def refill_list(request):
     end_date = request.GET.get("end_date")
 
     # Parse start and end date if provided
+    start_date_obj = None
+    end_date_obj = None
     if start_date:
         try:
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
         except ValueError:
-            start_date_obj = None
-    else:
-        start_date_obj = None
-
+            pass
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
         except ValueError:
-            end_date_obj = None
-    else:
-        end_date_obj = None
+            pass
 
     # All facilities
     facilities = Facility.objects.all()
@@ -253,7 +298,6 @@ def refill_list(request):
     # Filter by date range if provided
     if start_date_obj:
         refills = refills.filter(next_appointment__gte=start_date_obj)
-
     if end_date_obj:
         refills = refills.filter(next_appointment__lte=end_date_obj)
 
@@ -264,15 +308,21 @@ def refill_list(request):
         .values_list("case_manager", flat=True)
         .distinct()
     )
-    case_managers = sorted({cm.strip() for cm in case_managers_qs})
+    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
+
+    # Calculate days missed and missed_appointment flag
+    for refill in refills:
+        if refill.next_appointment and (not refill.last_pickup_date or refill.last_pickup_date < refill.next_appointment):
+            refill.days_missed = (today - refill.next_appointment).days
+            refill.missed_appointment = True
+        else:
+            refill.days_missed = 0
+            refill.missed_appointment = False
 
     # Group refills by period
     daily_expected = refills.filter(next_appointment=today)
     weekly_expected = refills.filter(next_appointment__range=[today, week_end])
-    monthly_expected = refills.filter(
-        next_appointment__year=today.year,
-        next_appointment__month=today.month
-    )
+    monthly_expected = refills.filter(next_appointment__year=today.year, next_appointment__month=today.month)
 
     # Pagination per period
     daily_page = Paginator(daily_expected.order_by("next_appointment"), 10)
@@ -306,14 +356,13 @@ def refill_list(request):
     return render(request, "refill_list.html", context)
 
 
-
 def export_refills_to_excel(refills):
-    today = timezone.now().date()
+    today = datetime.now().date()
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Expected Refills Data"
 
-    headers = ['Unique ID', 'Facility', 'Sex', 'Current Regimen', 'Case Manager', 'Next Appointment']
+    headers = ['Unique ID', 'Facility', 'Sex', 'Current Regimen', 'Case Manager', 'Last Pickup', 'Next Appointment', 'Days Missed']
     ws.append(headers)
 
     for refill in refills:
@@ -327,15 +376,16 @@ def export_refills_to_excel(refills):
             refill.sex,
             refill.current_regimen,
             refill.case_manager or "",
-            next_appointment,
+            last_pickup_date.strftime("%Y-%m-%d") if last_pickup_date else "Never Picked",
+            next_appointment.strftime("%Y-%m-%d") if next_appointment else "",
+            getattr(refill, "days_missed", 0),
         ]
         ws.append(row)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="Expected_Refills.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="Expected_Refills_{today}.xlsx"'
     wb.save(response)
     return response
-
 
 
 
@@ -449,40 +499,40 @@ def refill_add_or_update(request, pk=None):
 
 
 
-from .forms import UploadExcelForm
 
 
 
 
-def upload_excel(request):
-    if request.method == 'POST':
-        form = UploadExcelForm(request.POST, request.FILES)
-        excel_file = request.FILES.get('file')
 
-        # Optional: check max file size (1 GB)
-        MAX_FILE_SIZE = 1073741824
-        if excel_file and excel_file.size > MAX_FILE_SIZE:
-            return render(request, 'upload.html', {
-                'form': form,
-                'error': "File size exceeds the 1GB limit."
-            })
+# def upload_excel(request):
+#     if request.method == 'POST':
+#         form = UploadExcelForm(request.POST, request.FILES)
+#         excel_file = request.FILES.get('file')
 
-        if form.is_valid():
-            facility = form.cleaned_data['facility']  # None means All
-            try:
-                import_refills_from_excel(excel_file, facility)
-                return redirect('refill_list')
-            except ValidationError as e:
-                return render(request, 'upload.html', {
-                    'form': form,
-                    'error': str(e)
-                })
-        else:
-            return render(request, 'upload.html', {'form': form})
-    else:
-        form = UploadExcelForm()
+#         # Optional: check max file size (1 GB)
+#         MAX_FILE_SIZE = 1073741824
+#         if excel_file and excel_file.size > MAX_FILE_SIZE:
+#             return render(request, 'upload.html', {
+#                 'form': form,
+#                 'error': "File size exceeds the 1GB limit."
+#             })
 
-    return render(request, 'upload.html', {'form': form})
+#         if form.is_valid():
+#             facility = form.cleaned_data['facility']  # None means All
+#             try:
+#                 import_refills_from_excel(excel_file, facility)
+#                 return redirect('refill_list')
+#             except ValidationError as e:
+#                 return render(request, 'upload.html', {
+#                     'form': form,
+#                     'error': str(e)
+#                 })
+#         else:
+#             return render(request, 'upload.html', {'form': form})
+#     else:
+#         form = UploadExcelForm()
+
+#     return render(request, 'upload.html', {'form': form})
 
 
 
@@ -662,26 +712,30 @@ def daily_refill_list(request):
 
 
 
+
+
+
+
 def missed_refills(request):
     today = timezone.now().date()
 
-    # GET filter parameters
+    # ================= GET FILTER PARAMETERS =================
     facility_id = request.GET.get("facility")
     case_manager = request.GET.get("case_manager")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
 
-    # Base queryset: Active patients only
+    # ================= BASE QUERYSET =================
     refills = Refill.objects.filter(
         current_art_status__in=["Active", "Active Restart"]
-    )
+    ).select_related("facility")
 
     # ================= FILTERS =================
     if facility_id:
         try:
             refills = refills.filter(facility_id=int(facility_id))
         except ValueError:
-            pass  # ignore invalid input
+            pass
 
     if case_manager:
         refills = refills.filter(case_manager=case_manager)
@@ -692,47 +746,39 @@ def missed_refills(request):
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
             refills = refills.filter(next_appointment__gte=start_date_obj)
         except ValueError:
-            pass  # ignore invalid date format
+            pass
 
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
             refills = refills.filter(next_appointment__lte=end_date_obj)
         except ValueError:
-            pass  # ignore invalid date format
+            pass
 
     # ================= MISSED REFILLS LOGIC =================
-    missed_list = (
-        refills.filter(
-            next_appointment__lt=today  # Appointment is in the past
-        )
-        .filter(
-            Q(last_pickup_date__lt=F("next_appointment")) |  # Pickup after appointment
-            Q(last_pickup_date__isnull=True)  # No pickup yet
-        )
-        .select_related("facility")  # add "case_manager" if it's a FK
-        .order_by("next_appointment")
-    )
+    missed_list = refills.filter(next_appointment__lt=today).filter(
+        Q(last_pickup_date__lt=F("next_appointment")) |
+        Q(last_pickup_date__isnull=True)
+    ).order_by("next_appointment")
 
-    # Calculate days_missed for display
+    # ================= CALCULATE DAYS MISSED AND IIT STATUS =================
     for refill in missed_list:
         if refill.next_appointment:
-            refill.days_missed = (today - refill.next_appointment).days
+            days_missed = (today - refill.next_appointment).days
+            refill.days_missed = days_missed
+
+            if days_missed >= 28:
+                refill.iit_status = "IIT"
+            elif days_missed > 0:
+                days_remaining = 28 - days_missed
+                refill.iit_status = f"{days_remaining} days to IIT"
+            else:
+                refill.iit_status = "0"
         else:
             refill.days_missed = 0
+            refill.iit_status = "0"
 
     total_missed = missed_list.count()
-
-    # ================= UNIQUE CASE MANAGERS =================
-    case_managers_qs = (
-        Refill.objects
-        .exclude(case_manager__isnull=True)
-        .exclude(case_manager__exact="")  # exclude empty strings
-        .values_list("case_manager", flat=True)
-        .distinct()
-    )
-    # Strip spaces and remove duplicates
-    case_managers = sorted({cm.strip() for cm in case_managers_qs})
 
     # ================= EXPORT TO EXCEL =================
     if request.GET.get("export") == "excel":
@@ -747,30 +793,41 @@ def missed_refills(request):
             "Last Pickup",
             "Next Appointment",
             "Days Missed",
+            "IIT Status",
         ]
         worksheet.append(headers)
 
         for refill in missed_list:
-            worksheet.append([  # Write data to worksheet
+            worksheet.append([
                 refill.unique_id,
-                refill.case_manager or "",
+                refill.case_manager,
                 refill.facility.name if refill.facility else "",
-                refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "Never Picked",
-                refill.next_appointment.strftime("%Y-%m-%d") if refill.next_appointment else "",
+                refill.last_pickup_date,
+                refill.next_appointment,
                 refill.days_missed,
+                refill.iit_status,
             ])
 
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        response["Content-Disposition"] = f'attachment; filename=missed_refills_{today}.xlsx'
+        response["Content-Disposition"] = 'attachment; filename="missed_refills.xlsx"'
         workbook.save(response)
         return response
 
     # ================= PAGINATION =================
-    paginator = Paginator(missed_list, 20)  # 20 per page
+    paginator = Paginator(missed_list, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+
+    # ================= UNIQUE CASE MANAGERS =================
+    case_managers_qs = (
+        Refill.objects.exclude(case_manager__isnull=True)
+        .exclude(case_manager__exact="")
+        .values_list("case_manager", flat=True)
+        .distinct()
+    )
+    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
 
     # ================= CONTEXT =================
     context = {

@@ -1,4 +1,5 @@
 asgiref==3.11.1
+dj-database-url==3.1.1
 Django==6.0.2
 django-filter==25.2
 et_xmlfile==2.0.0
@@ -7,7 +8,9 @@ numpy==2.4.2
 openpyxl==3.1.5
 packaging==26.0
 pandas==3.0.0
+psycopg2-binary==2.9.11
 python-dateutil==2.9.0.post0
+python-decouple==3.8
 six==1.17.0
 sqlparse==0.5.5
 tzdata==2025.3
