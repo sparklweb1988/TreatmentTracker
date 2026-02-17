@@ -258,91 +258,174 @@ def dashboard(request):
 from django.utils import timezone
 
 
-
-
-
-
-
 def refill_list(request):
     today = datetime.now().date()
     week_end = today + timedelta(days=7)
 
-    # GET filters
+    # =============================
+    # GET FILTERS
+    # =============================
     facility_id = request.GET.get("facility")
     selected_case_manager = request.GET.get("case_manager")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
 
-    # Parse start and end date if provided
+    # =============================
+    # PARSE DATE FILTERS
+    # =============================
     start_date_obj = None
     end_date_obj = None
+
     if start_date:
         try:
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
         except ValueError:
             pass
+
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
         except ValueError:
             pass
 
-    # All facilities
+    # =============================
+    # LOAD DATA
+    # =============================
     facilities = Facility.objects.all()
-
-    # Base queryset
     refills = Refill.objects.all()
 
-    # Filter by facility if provided
+    # =============================
+    # APPLY FILTERS
+    # =============================
     if facility_id:
         try:
             refills = refills.filter(facility_id=int(facility_id))
         except ValueError:
             pass
 
-    # Filter by case manager if provided
     if selected_case_manager:
         refills = refills.filter(case_manager=selected_case_manager)
 
-    # Filter by date range if provided
     if start_date_obj:
         refills = refills.filter(next_appointment__gte=start_date_obj)
+
     if end_date_obj:
         refills = refills.filter(next_appointment__lte=end_date_obj)
 
-    # Unique case managers for filter dropdown
+    # =============================
+    # CASE MANAGER DROPDOWN LIST
+    # =============================
     case_managers_qs = (
         Refill.objects.exclude(case_manager__isnull=True)
         .exclude(case_manager__exact="")
         .values_list("case_manager", flat=True)
         .distinct()
     )
-    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
 
-    # Calculate days missed and missed_appointment flag
+    case_managers = sorted(
+        {cm.strip() for cm in case_managers_qs if cm and cm.strip()}
+    )
+
+    # =============================
+    # CALCULATE MISSED + DAYS MISSED
+    # =============================
     for refill in refills:
-        if refill.next_appointment and (not refill.last_pickup_date or refill.last_pickup_date < refill.next_appointment):
+        if (
+            refill.next_appointment
+            and refill.next_appointment < today
+        ):
             refill.days_missed = (today - refill.next_appointment).days
             refill.missed_appointment = True
         else:
             refill.days_missed = 0
             refill.missed_appointment = False
 
-    # Group refills by period
+    # =============================
+    # PURE PYTHON RISK PREDICTION
+    # =============================
+
+    high_risk_keywords = [
+        "transport", "money", "no money", "travel",
+        "forgot", "busy", "work", "distance",
+        "sick", "hospital", "admitted",
+        "defaulted", "stopped", "side effect"
+    ]
+
+    medium_risk_keywords = [
+        "delay", "reschedule", "family issue",
+        "school", "appointment clash",
+        "funeral", "religious"
+    ]
+
+    for refill in refills:
+
+        score = 0
+
+        # 1️⃣ Past Missed Appointment
+        if refill.missed_appointment:
+            score += 40
+
+        # 2️⃣ Days Missed Impact
+        if refill.days_missed > 30:
+            score += 25
+        elif refill.days_missed > 7:
+            score += 15
+
+        # 3️⃣ Remark Text Analysis
+        if refill.remark:
+            remark_lower = refill.remark.lower()
+
+            for word in high_risk_keywords:
+                if word in remark_lower:
+                    score += 20
+
+            for word in medium_risk_keywords:
+                if word in remark_lower:
+                    score += 10
+
+        # 4️⃣ ART Status Impact
+        if refill.current_art_status == "Inactive":
+            score += 30
+        elif refill.current_art_status == "Active Restart":
+            score += 20
+
+        # Cap at 100%
+        score = min(score, 100)
+
+        refill.prediction_probability = score
+
+    # =============================
+    # GROUP BY PERIOD
+    # =============================
     daily_expected = refills.filter(next_appointment=today)
-    weekly_expected = refills.filter(next_appointment__range=[today, week_end])
-    monthly_expected = refills.filter(next_appointment__year=today.year, next_appointment__month=today.month)
+    weekly_expected = refills.filter(
+        next_appointment__range=[today, week_end]
+    )
+    monthly_expected = refills.filter(
+        next_appointment__year=today.year,
+        next_appointment__month=today.month
+    )
 
-    # Pagination per period
-    daily_page = Paginator(daily_expected.order_by("next_appointment"), 10)
-    weekly_page = Paginator(weekly_expected.order_by("next_appointment"), 10)
-    monthly_page = Paginator(monthly_expected.order_by("next_appointment"), 10)
+    # =============================
+    # PAGINATION
+    # =============================
+    daily_page = Paginator(
+        daily_expected.order_by("next_appointment"), 10
+    )
+    weekly_page = Paginator(
+        weekly_expected.order_by("next_appointment"), 10
+    )
+    monthly_page = Paginator(
+        monthly_expected.order_by("next_appointment"), 10
+    )
 
-    # Get current page numbers
     daily_number = request.GET.get("daily_page")
     weekly_number = request.GET.get("weekly_page")
     monthly_number = request.GET.get("monthly_page")
 
+    # =============================
+    # CONTEXT
+    # =============================
     context = {
         "facilities": facilities,
         "selected_facility": facility_id,
@@ -352,17 +435,30 @@ def refill_list(request):
         "selected_start_date": start_date,
         "selected_end_date": end_date,
         "periods": [
-            {"name": "Daily", "page_obj": daily_page.get_page(daily_number)},
-            {"name": "Weekly", "page_obj": weekly_page.get_page(weekly_number)},
-            {"name": "Monthly", "page_obj": monthly_page.get_page(monthly_number)},
+            {
+                "name": "Daily",
+                "page_obj": daily_page.get_page(daily_number),
+            },
+            {
+                "name": "Weekly",
+                "page_obj": weekly_page.get_page(weekly_number),
+            },
+            {
+                "name": "Monthly",
+                "page_obj": monthly_page.get_page(monthly_number),
+            },
         ],
     }
 
-    # Excel export
-    if 'download' in request.GET:
+    # =============================
+    # EXCEL EXPORT
+    # =============================
+    if "download" in request.GET:
         return export_refills_to_excel(refills)
 
     return render(request, "refill_list.html", context)
+
+
 
 
 def export_refills_to_excel(refills):
