@@ -934,6 +934,130 @@ def missed_refills(request):
         .distinct()
     )
     case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
+def missed_refills(request):
+    today = timezone.now().date()
+
+    # ================= GET FILTER PARAMETERS =================
+    facility_id = request.GET.get("facility")
+    case_manager = request.GET.get("case_manager")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+
+    # ================= BASE QUERYSET =================
+    refills = Refill.objects.filter(
+        current_art_status__in=["Active", "Active Restart"]
+    ).select_related("facility")
+
+    # ================= FILTERS =================
+    if facility_id:
+        try:
+            refills = refills.filter(facility_id=int(facility_id))
+        except ValueError:
+            pass
+
+    if case_manager:
+        refills = refills.filter(case_manager=case_manager)
+
+    # ================= DATE FILTER =================
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+            refills = refills.filter(next_appointment__gte=start_date_obj)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+            refills = refills.filter(next_appointment__lte=end_date_obj)
+        except ValueError:
+            pass
+
+    # ================= MISSED REFILLS LOGIC =================
+    missed_list = refills.filter(next_appointment__lt=today).filter(
+        Q(last_pickup_date__lt=F("next_appointment")) |
+        Q(last_pickup_date__isnull=True)
+    ).order_by("next_appointment")
+
+    # ================= CALCULATE DAYS MISSED AND IIT STATUS =================
+    for refill in missed_list:
+        if refill.next_appointment:
+            days_missed = (today - refill.next_appointment).days
+            refill.days_missed = days_missed
+
+            iit_date = refill.next_appointment + timedelta(days=28)
+            days_to_iit = (iit_date - today).days
+
+            if days_missed >= 28:
+                refill.iit_status = "IIT"
+            elif days_missed > 0:
+                refill.iit_status = f"{days_to_iit} days to IIT"
+            else:
+                refill.iit_status = "0"
+        else:
+            refill.days_missed = 0
+            refill.iit_status = "0"
+
+    total_missed = missed_list.count()
+
+    # ================= EXPORT TO EXCEL =================
+    if request.GET.get("export") == "excel":
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Missed Refills"
+
+        headers = [
+            "Unique ID",
+            "Case Manager",
+            "Facility",
+            "Last Pickup",
+            "Next Appointment",
+            "Days Missed",
+            "IIT Status",
+        ]
+        worksheet.append(headers)
+
+        # Make header bold
+        from openpyxl.styles import Font
+        for col in range(1, len(headers) + 1):
+            worksheet.cell(row=1, column=col).font = Font(bold=True)
+
+        for refill in missed_list:
+            worksheet.append([
+                refill.unique_id,
+                refill.case_manager or "",
+                refill.facility.name if refill.facility else "",
+                refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "",
+                refill.next_appointment.strftime("%Y-%m-%d") if refill.next_appointment else "",
+                refill.days_missed,
+                refill.iit_status,
+            ])
+
+        # Auto column width
+        for column_cells in worksheet.columns:
+            length = max(len(str(cell.value)) for cell in column_cells if cell.value)
+            worksheet.column_dimensions[column_cells[0].column_letter].width = length + 4
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="missed_refills.xlsx"'
+        workbook.save(response)
+        return response
+
+    # ================= PAGINATION =================
+    paginator = Paginator(missed_list, 25)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # ================= UNIQUE CASE MANAGERS =================
+    case_managers_qs = (
+        Refill.objects.exclude(case_manager__isnull=True)
+        .exclude(case_manager__exact="")
+        .values_list("case_manager", flat=True)
+        .distinct()
+    )
+    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm.strip()})
 
     # ================= CONTEXT =================
     context = {
@@ -949,51 +1073,5 @@ def missed_refills(request):
     }
 
     return render(request, "missed_refills.html", context)
-
-
-# ================= EXPORT TO EXCEL =================
-if request.GET.get("export") == "excel":
-    workbook = Workbook()
-    worksheet = workbook.active
-    worksheet.title = "Missed Refills"
-
-    headers = [
-        "Unique ID",
-        "Case Manager",
-        "Facility",
-        "Last Pickup",
-        "Next Appointment",
-        "Days Missed",
-        "IIT Status",
-    ]
-    worksheet.append(headers)
-
-    # Make header bold
-    from openpyxl.styles import Font
-    for col in range(1, len(headers) + 1):
-        worksheet.cell(row=1, column=col).font = Font(bold=True)
-
-    for refill in missed_list:
-        worksheet.append([
-            refill.unique_id,
-            refill.case_manager or "",
-            refill.facility.name if refill.facility else "",
-            refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "",
-            refill.next_appointment.strftime("%Y-%m-%d") if refill.next_appointment else "",
-            refill.days_missed,
-            refill.iit_status,
-        ])
-
-    # Auto column width
-    for column_cells in worksheet.columns:
-        length = max(len(str(cell.value)) for cell in column_cells if cell.value)
-        worksheet.column_dimensions[column_cells[0].column_letter].width = length + 4
-
-    response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    response["Content-Disposition"] = 'attachment; filename="missed_refills.xlsx"'
-    workbook.save(response)
-    return response
 
 
