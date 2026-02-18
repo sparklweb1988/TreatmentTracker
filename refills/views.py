@@ -22,7 +22,11 @@ from openpyxl.styles import Font
 
 # views.py
 
+
 from io import BytesIO
+
+
+
 
 
 VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
@@ -31,7 +35,32 @@ VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
 def import_refills_from_excel(file):
     df = pd.read_excel(file)
 
+
     # Updated required columns including the new VL columns
+
+    # ================= FILE SIZE CHECK =================
+    if file.size > 1073741824:  # 1GB
+        raise ValidationError("File size exceeds the maximum allowed limit of 1GB.")
+
+    # ================= SAFE FILE READ =================
+    file.seek(0)
+    df = pd.read_excel(BytesIO(file.read()))
+
+def import_refills_from_excel(file):
+    """
+    Import refill data from Excel containing multiple facilities.
+    Deletes old data per facility before inserting new rows.
+    """
+
+    if file.size > 1073741824:
+        raise ValidationError("File size exceeds the maximum allowed limit of 1GB.")
+
+    file.seek(0)
+    df = pd.read_excel(file)
+
+
+    # ================= REQUIRED COLUMNS =================
+
     required_columns = [
         'Unique Id',
         'Last Pickup Date (yyyy-mm-dd)',
@@ -50,10 +79,20 @@ def import_refills_from_excel(file):
         if col not in df.columns:
             raise ValidationError(f"Missing column: {col}")
 
+
     # Only include Active / Active Restart patients
+
+
+    # ================= FILTER ACTIVE PATIENTS =================
+
+    # Filter only Active patients
+
+
     df = df[df['Current ART Status'].isin(['Active', 'Active Restart'])]
+
     if df.empty:
         raise ValidationError("No Active or Active Restart patients found.")
+
 
     # Clean facility names
     df['Facility Name'] = df['Facility Name'].astype(str).str.strip()
@@ -61,6 +100,11 @@ def import_refills_from_excel(file):
     facilities = Facility.objects.filter(name__in=facility_names)
     if not facilities.exists():
         raise ValidationError("No matching facilities found in database.")
+
+
+    # ================= TRACK DELETED FACILITIES =================
+    deleted_facilities = set()
+
 
     facility_map = {f.name: f for f in facilities}
 
@@ -84,6 +128,7 @@ def import_refills_from_excel(file):
             Refill(
                 facility=facility,
                 unique_id=row['Unique Id'],
+
                 last_pickup_date=last_pickup,
                 months_of_refill_days=months,
                 next_appointment=next_appointment,
@@ -93,6 +138,43 @@ def import_refills_from_excel(file):
                 current_art_status=row['Current ART Status'],
                 art_start_date=art_start_date,
                 vl_sample_collection_date=vl_sample_collection_date,
+
+                defaults={
+                    'last_pickup_date': last_pickup_date,
+                    'months_of_refill_days': months,  # store decimal value
+                    'next_appointment': next_appointment,
+                    'current_regimen': str(row['Current ART Regimen']).strip(),
+                    'case_manager': str(row['Case Manager']).strip(),
+                    'sex': str(row['Sex']).strip(),
+                    'current_art_status': row['Current ART Status'].strip(),
+                }
+
+    # Normalize facility names
+    df['Facility Name'] = df['Facility Name'].astype(str).str.strip().str.lower()
+
+    facilities = {
+        f.name.strip().lower(): f
+        for f in Facility.objects.all()
+    }
+
+    missing_facilities = set(df['Facility Name'].unique()) - set(facilities.keys())
+
+    if missing_facilities:
+        raise ValidationError(
+            f"These facilities do not exist in the system: {', '.join(missing_facilities)}"
+        )
+
+    # Validate ALL rows before deleting anything
+    validated_rows = []
+
+    for index, row in df.iterrows():
+        unique_id = row['Unique Id']
+
+        if pd.isnull(row['Last Pickup Date (yyyy-mm-dd)']):
+            raise ValidationError(
+                f"Missing Last Pickup Date for Unique Id {unique_id}"
+
+
             )
         )
 
@@ -107,6 +189,82 @@ def import_refills_from_excel(file):
 
 
 
+        try:
+            last_pickup_date = pd.to_datetime(
+                row['Last Pickup Date (yyyy-mm-dd)']
+            ).date()
+        except Exception:
+            raise ValidationError(
+                f"Invalid Last Pickup Date format for Unique Id {unique_id}"
+            )
+
+        try:
+            months = int(row['Months of ARV Refill'])
+        except Exception:
+            raise ValidationError(
+                f"Invalid Months of ARV Refill for Unique Id {unique_id}"
+            )
+
+        if months not in VALID_REFILL_MONTHS:
+            raise ValidationError(
+                f"Invalid refill duration {months} months "
+                f"for Unique Id {unique_id}. Allowed values: {VALID_REFILL_MONTHS}"
+            )
+
+        facility_obj = facilities[row['Facility Name']]
+
+        refill_days = months * 30
+        next_appointment = last_pickup_date + timedelta(days=refill_days)
+
+        validated_rows.append(
+            Refill(
+                facility=facility_obj,
+                unique_id=unique_id,
+                last_pickup_date=last_pickup_date,
+                next_appointment=next_appointment,
+                months_of_refill_days=refill_days,
+                current_regimen=row['Current ART Regimen'],
+                case_manager=str(row['Case Manager']).strip(),
+                sex=str(row['Sex']).strip(),
+                current_art_status=row['Current ART Status'].strip(),
+            )
+        )
+
+    # Delete old data only after full validation
+    facility_ids = {obj.facility.id for obj in validated_rows}
+
+    with transaction.atomic():
+        for facility_id in facility_ids:
+            Refill.objects.filter(facility_id=facility_id).delete()
+
+        Refill.objects.bulk_create(validated_rows, batch_size=1000)
+
+def upload_excel(request):
+    if request.method == 'POST':
+        form = UploadExcelForm(request.POST, request.FILES)
+        excel_file = request.FILES.get('file')
+
+        if excel_file and excel_file.size > 1073741824:  # 1GB
+            return render(request, 'upload.html', {
+                'form': form,
+                'error': "File size exceeds the 1GB limit."
+            })
+
+        if form.is_valid():
+            try:
+                import_refills_from_excel(excel_file)
+                return redirect('refill_list')
+            except ValidationError as e:
+                return render(request, 'upload.html', {
+                    'form': form,
+                    'error': str(e)
+                })
+        else:
+            return render(request, 'upload.html', {'form': form})
+    else:
+        form = UploadExcelForm()
+
+    return render(request, 'upload.html', {'form': form})
 
 def upload_excel(request):
     if request.method == 'POST':
@@ -913,4 +1071,8 @@ def missed_refills(request):
         "query_params": query_params.urlencode(),  # safe for template links
     }
 
+
     return render(request, "missed_refills.html", context)
+
+
+
