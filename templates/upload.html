@@ -10,6 +10,17 @@
             </div>
 
             <div class="card-body">
+
+                <!-- SUCCESS & ERROR MESSAGES -->
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+
                 <form id="upload-form" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
@@ -20,12 +31,19 @@
                         <div class="form-text">
                             Maximum file size: 1 GB. The file can contain multiple facilities.
                         </div>
+
+                        <!-- Field Errors -->
+                        {% if form.file.errors %}
+                        <div class="text-danger mt-2">
+                            {{ form.file.errors }}
+                        </div>
+                        {% endif %}
                     </div>
 
-                    <!-- Display Error -->
-                    {% if error %}
+                    <!-- General Form Errors -->
+                    {% if form.errors %}
                     <div class="alert alert-danger">
-                        {{ error }}
+                        {{ form.errors }}
                     </div>
                     {% endif %}
 
@@ -34,13 +52,13 @@
                         Upload File
                     </button>
 
-                    <!-- Spinner (hidden by default) -->
-                    <div id="loading-spinner" class="text-center mt-3" style="display: none;">
+                    <!-- Spinner -->
+                    <!-- <div id="loading-spinner" class="text-center mt-3" style="display: none;">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Uploading...</span>
                         </div>
                         <div class="mt-2">Uploading and processing, please wait...</div>
-                    </div>
+                    </div> -->
 
                 </form>
             </div>
@@ -49,14 +67,12 @@
     </div>
 </div>
 
-<!-- JavaScript to show spinner on submit -->
-<script>
+<!-- Spinner Script -->
+<!-- <script>
 document.getElementById('upload-form').addEventListener('submit', function() {
-    // Hide submit button to prevent multiple clicks
     document.getElementById('submit-btn').style.display = 'none';
-    // Show spinner
     document.getElementById('loading-spinner').style.display = 'block';
 });
-</script>
+</script> -->
 
 {% endblock %}

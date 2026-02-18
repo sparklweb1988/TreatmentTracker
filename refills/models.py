@@ -1,6 +1,7 @@
 from django.db import models
 from datetime import timedelta
 from django.utils import timezone
+from decimal import Decimal
 
 class Facility(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -21,15 +22,9 @@ class Facility(models.Model):
 
 
 
-class Refill(models.Model):
 
-    # Choices for refill duration
-    REFILL_DAY_CHOICES = (
-        (30, "30 Days"),
-        (60, "60 Days"),
-        (90, "90 Days"),
-        (180, "180 Days"),
-    )
+
+class Refill(models.Model):
 
     # Choices for gender
     SEX_CHOICES = (
@@ -53,7 +48,9 @@ class Refill(models.Model):
     unique_id = models.CharField(max_length=100)
     last_pickup_date = models.DateField()
     sex = models.CharField(max_length=10, choices=SEX_CHOICES)
-    months_of_refill_days = models.IntegerField(choices=REFILL_DAY_CHOICES)
+    
+    # ✅ Changed from IntegerField to DecimalField to allow decimals
+    months_of_refill_days = models.DecimalField(max_digits=4, decimal_places=2)
     current_regimen = models.CharField(max_length=255)
     case_manager = models.CharField(max_length=255)
     remark = models.TextField(blank=True, null=True)
@@ -84,19 +81,14 @@ class Refill(models.Model):
         - expected_iit_date = next_appointment + 28 days
         """
         if self.last_pickup_date and self.months_of_refill_days:
-            # No need to call .date() as `last_pickup_date` is already a datetime.date
-            self.next_appointment = self.last_pickup_date + timedelta(days=self.months_of_refill_days)
+            days = float(self.months_of_refill_days) * 30  # ✅ handle decimals
+            self.next_appointment = self.last_pickup_date + timedelta(days=days)
             self.expected_iit_date = self.next_appointment + timedelta(days=28)
 
     def save(self, *args, **kwargs):
-        """
-        Automatically calculates next appointment and expected IIT on save.
-        Marks missed_appointment if next appointment is past today.
-        """
-        today = timezone.now().date()  # Use timezone-aware date for comparison
+        today = timezone.now().date()
         self.calculate_dates()
 
-        # If the next appointment is past today, mark it as a missed appointment
         if self.next_appointment and self.next_appointment < today:
             self.missed_appointment = True
 

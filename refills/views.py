@@ -15,24 +15,20 @@ from django.core.paginator import Paginator
 from openpyxl import Workbook
 from datetime import datetime
 from .forms import UploadExcelForm
+from django.contrib import messages
 
 
 
 # views.py
 
+from io import BytesIO
 
-VALID_REFILL_MONTHS = [1, 2, 3, 6]
+
+
+VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
+
 
 def import_refills_from_excel(file):
-    """
-    Import refill data from Excel containing multiple facilities.
-    Deletes old data per facility before inserting new rows.
-    """
-
-    if file.size > 1073741824:
-        raise ValidationError("File size exceeds the maximum allowed limit of 1GB.")
-
-    file.seek(0)
     df = pd.read_excel(file)
 
     required_columns = [
@@ -50,114 +46,90 @@ def import_refills_from_excel(file):
         if col not in df.columns:
             raise ValidationError(f"Missing column: {col}")
 
-    # Filter only Active patients
     df = df[df['Current ART Status'].isin(['Active', 'Active Restart'])]
 
     if df.empty:
         raise ValidationError("No Active or Active Restart patients found.")
 
-    # Normalize facility names
-    df['Facility Name'] = df['Facility Name'].astype(str).str.strip().str.lower()
+    df['Facility Name'] = df['Facility Name'].astype(str).str.strip()
+    facility_names = df['Facility Name'].unique()
 
-    facilities = {
-        f.name.strip().lower(): f
-        for f in Facility.objects.all()
-    }
+    facilities = Facility.objects.filter(name__in=facility_names)
 
-    missing_facilities = set(df['Facility Name'].unique()) - set(facilities.keys())
+    if not facilities.exists():
+        raise ValidationError("No matching facilities found in database.")
 
-    if missing_facilities:
-        raise ValidationError(
-            f"These facilities do not exist in the system: {', '.join(missing_facilities)}"
-        )
+    facility_map = {f.name: f for f in facilities}
 
-    # Validate ALL rows before deleting anything
-    validated_rows = []
+    new_refills = []
 
-    for index, row in df.iterrows():
-        unique_id = row['Unique Id']
+    for _, row in df.iterrows():
 
-        if pd.isnull(row['Last Pickup Date (yyyy-mm-dd)']):
-            raise ValidationError(
-                f"Missing Last Pickup Date for Unique Id {unique_id}"
-            )
+        facility = facility_map.get(row['Facility Name'])
 
-        try:
-            last_pickup_date = pd.to_datetime(
-                row['Last Pickup Date (yyyy-mm-dd)']
-            ).date()
-        except Exception:
-            raise ValidationError(
-                f"Invalid Last Pickup Date format for Unique Id {unique_id}"
-            )
+        if not facility:
+            raise ValidationError(f"Facility not found: {row['Facility Name']}")
 
-        try:
-            months = int(row['Months of ARV Refill'])
-        except Exception:
-            raise ValidationError(
-                f"Invalid Months of ARV Refill for Unique Id {unique_id}"
-            )
+        last_pickup = pd.to_datetime(row['Last Pickup Date (yyyy-mm-dd)']).date()
+        months = float(row['Months of ARV Refill'])
 
-        if months not in VALID_REFILL_MONTHS:
-            raise ValidationError(
-                f"Invalid refill duration {months} months "
-                f"for Unique Id {unique_id}. Allowed values: {VALID_REFILL_MONTHS}"
-            )
+        next_appointment = last_pickup + timedelta(days=months * 30)
 
-        facility_obj = facilities[row['Facility Name']]
-
-        refill_days = months * 30
-        next_appointment = last_pickup_date + timedelta(days=refill_days)
-
-        validated_rows.append(
+        new_refills.append(
             Refill(
-                facility=facility_obj,
-                unique_id=unique_id,
-                last_pickup_date=last_pickup_date,
+                facility=facility,
+                unique_id=row['Unique Id'],
+                last_pickup_date=last_pickup,
+                months_of_refill_days=months,
                 next_appointment=next_appointment,
-                months_of_refill_days=refill_days,
                 current_regimen=row['Current ART Regimen'],
-                case_manager=str(row['Case Manager']).strip(),
-                sex=str(row['Sex']).strip(),
-                current_art_status=row['Current ART Status'].strip(),
+                case_manager=row['Case Manager'],
+                sex=row['Sex'],
+                current_art_status=row['Current ART Status'],
             )
         )
 
-    # Delete old data only after full validation
-    facility_ids = {obj.facility.id for obj in validated_rows}
-
+    # 🔥 Only now delete and insert inside transaction
     with transaction.atomic():
-        for facility_id in facility_ids:
-            Refill.objects.filter(facility_id=facility_id).delete()
+        facility_ids = facilities.values_list('id', flat=True)
+        Refill.objects.filter(facility_id__in=facility_ids).delete()
+        Refill.objects.bulk_create(new_refills, batch_size=1000)
 
-        Refill.objects.bulk_create(validated_rows, batch_size=1000)
+    return len(new_refills)
+
+
+
+
 
 def upload_excel(request):
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
-        excel_file = request.FILES.get('file')
 
-        if excel_file and excel_file.size > 1073741824:  # 1GB
-            return render(request, 'upload.html', {
-                'form': form,
-                'error': "File size exceeds the 1GB limit."
-            })
+        if not request.FILES:
+            messages.error(request, "No file was uploaded.")
+            return redirect('upload_excel')
 
         if form.is_valid():
+            excel_file = form.cleaned_data['file']
+
             try:
                 import_refills_from_excel(excel_file)
-                return redirect('refill_list')
-            except ValidationError as e:
-                return render(request, 'upload.html', {
-                    'form': form,
-                    'error': str(e)
-                })
+                messages.success(request, "Excel uploaded and processed successfully!")
+                return redirect('upload_excel')
+
+            except Exception as e:
+                messages.error(request, f"Upload failed: {str(e)}")
+                return redirect('upload_excel')
+
         else:
-            return render(request, 'upload.html', {'form': form})
+            messages.error(request, "Form validation failed.")
+            print("FORM ERRORS:", form.errors)
+
     else:
         form = UploadExcelForm()
 
     return render(request, 'upload.html', {'form': form})
+
 
 # ================================
 # DASHBOARD
@@ -1072,6 +1044,7 @@ def missed_refills(request):
         "selected_end_date": end_date,
     }
 
+
     return render(request, "missed_refills.html", context)
 
-
+ 
