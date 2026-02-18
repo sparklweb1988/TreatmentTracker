@@ -10,6 +10,13 @@
 
 <div class="container mt-4">
 
+  <!-- ================= COUNT HEADER ================= -->
+  <div class="mb-3 text-center">
+    <h4 class="fw-bold text-danger">
+      Total Missed Appointments: {{ total_missed }}
+    </h4>
+  </div>
+
   <!-- ================= FILTERS ================= -->
   <form method="get" class="mb-4 row g-2 align-items-center">
     <div class="col-12 col-md-3">
@@ -44,11 +51,8 @@
       <input type="date" name="end_date" value="{{ selected_end_date }}" class="form-control">
     </div>
 
-    <div class="col-12 col-md-2 d-flex flex-column gap-1">
+    <div class="col-12 col-md-2">
       <button type="submit" class="btn btn-danger w-100">Apply Filters</button>
-      <button type="submit" name="export" value="excel" class="btn btn-success w-100">
-        Download Excel
-      </button>
     </div>
   </form>
 
@@ -179,6 +183,17 @@
       </div>
     </div>
   </div>
+
+  <!-- ================= DOWNLOAD BUTTON AT BOTTOM ================= -->
+  <form method="get" class="mt-4">
+    <input type="hidden" name="facility" value="{{ selected_facility }}">
+    <input type="hidden" name="case_manager" value="{{ selected_case_manager }}">
+    <input type="hidden" name="start_date" value="{{ selected_start_date }}">
+    <input type="hidden" name="end_date" value="{{ selected_end_date }}">
+    <button type="submit" name="export" value="excel" class="btn btn-success w-100">
+      Download Excel Report
+    </button>
+  </form>
 
 </div>
 
