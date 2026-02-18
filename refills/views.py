@@ -25,21 +25,16 @@ VALID_REFILL_MONTHS = [1, 2, 3, 6]
 
 def import_refills_from_excel(file):
     """
-    Import refill data from an Excel file containing multiple facilities.
-    Old data per facility will be deleted before uploading new rows.
+    Import refill data from Excel containing multiple facilities.
+    Deletes old data per facility before inserting new rows.
     """
 
-    # ================= FILE SIZE CHECK =================
-    if file.size > 1073741824:  # 1GB
+    if file.size > 1073741824:
         raise ValidationError("File size exceeds the maximum allowed limit of 1GB.")
 
-    # ================= SAFE FILE READ =================
     file.seek(0)
-    from io import BytesIO
-    file_data = file.read()
-    df = pd.read_excel(BytesIO(file_data))
+    df = pd.read_excel(file)
 
-    # ================= REQUIRED COLUMNS =================
     required_columns = [
         'Unique Id',
         'Last Pickup Date (yyyy-mm-dd)',
@@ -55,82 +50,87 @@ def import_refills_from_excel(file):
         if col not in df.columns:
             raise ValidationError(f"Missing column: {col}")
 
-    # ================= FILTER ACTIVE PATIENTS =================
+    # Filter only Active patients
     df = df[df['Current ART Status'].isin(['Active', 'Active Restart'])]
+
     if df.empty:
         raise ValidationError("No Active or Active Restart patients found.")
 
-    # ================= TRACK DELETED FACILITIES =================
-    deleted_facilities = set()
+    # Normalize facility names
+    df['Facility Name'] = df['Facility Name'].astype(str).str.strip().str.lower()
 
-    with transaction.atomic():
-        for _, row in df.iterrows():
-            facility_name = str(row['Facility Name']).strip()
-            if not facility_name or facility_name.lower() == "nan":
-                raise ValidationError(
-                    f"Missing Facility Name for Unique Id {row['Unique Id']}"
-                )
+    facilities = {
+        f.name.strip().lower(): f
+        for f in Facility.objects.all()
+    }
 
-            try:
-                facility_obj = Facility.objects.get(name__iexact=facility_name)
-            except Facility.DoesNotExist:
-                raise ValidationError(f"Facility '{facility_name}' does not exist.")
-            except Facility.MultipleObjectsReturned:
-                raise ValidationError(
-                    f"Multiple facilities found for '{facility_name}'. Remove duplicates."
-                )
+    missing_facilities = set(df['Facility Name'].unique()) - set(facilities.keys())
 
-            # ================= DELETE OLD DATA ONCE PER FACILITY =================
-            if facility_obj.id not in deleted_facilities:
-                Refill.objects.filter(facility=facility_obj).delete()
-                deleted_facilities.add(facility_obj.id)
+    if missing_facilities:
+        raise ValidationError(
+            f"These facilities do not exist in the system: {', '.join(missing_facilities)}"
+        )
 
-            # ================= VALIDATE LAST PICKUP DATE =================
-            if pd.isnull(row['Last Pickup Date (yyyy-mm-dd)']):
-                raise ValidationError(
-                    f"Missing Last Pickup Date for Unique Id {row['Unique Id']}"
-                )
-            try:
-                last_pickup_date = pd.to_datetime(
-                    row['Last Pickup Date (yyyy-mm-dd)']
-                ).date()
-            except Exception:
-                raise ValidationError(
-                    f"Invalid Last Pickup Date format for Unique Id {row['Unique Id']}"
-                )
+    # Validate ALL rows before deleting anything
+    validated_rows = []
 
-            # ================= VALIDATE MONTHS =================
-            try:
-                months = int(row['Months of ARV Refill'])
-            except Exception:
-                raise ValidationError(
-                    f"Invalid Months of ARV Refill for Unique Id {row['Unique Id']}"
-                )
+    for index, row in df.iterrows():
+        unique_id = row['Unique Id']
 
-            if months not in VALID_REFILL_MONTHS:
-                raise ValidationError(
-                    f"Invalid refill duration {months} months "
-                    f"for Unique Id {row['Unique Id']}. Allowed: 1, 2, 3, 6"
-                )
-
-            refill_days = months * 30
-            next_appointment = last_pickup_date + timedelta(days=refill_days)
-
-            # ================= CREATE OR UPDATE =================
-            Refill.objects.update_or_create(
-                facility=facility_obj,
-                unique_id=row['Unique Id'],
-                defaults={
-                    'last_pickup_date': last_pickup_date,
-                    'next_appointment': next_appointment,
-                    'months_of_refill_days': refill_days,
-                    'current_regimen': row['Current ART Regimen'],
-                    'case_manager': str(row['Case Manager']).strip(),
-                    'sex': str(row['Sex']).strip(),
-                    'current_art_status': row['Current ART Status'].strip(),
-                }
+        if pd.isnull(row['Last Pickup Date (yyyy-mm-dd)']):
+            raise ValidationError(
+                f"Missing Last Pickup Date for Unique Id {unique_id}"
             )
 
+        try:
+            last_pickup_date = pd.to_datetime(
+                row['Last Pickup Date (yyyy-mm-dd)']
+            ).date()
+        except Exception:
+            raise ValidationError(
+                f"Invalid Last Pickup Date format for Unique Id {unique_id}"
+            )
+
+        try:
+            months = int(row['Months of ARV Refill'])
+        except Exception:
+            raise ValidationError(
+                f"Invalid Months of ARV Refill for Unique Id {unique_id}"
+            )
+
+        if months not in VALID_REFILL_MONTHS:
+            raise ValidationError(
+                f"Invalid refill duration {months} months "
+                f"for Unique Id {unique_id}. Allowed values: {VALID_REFILL_MONTHS}"
+            )
+
+        facility_obj = facilities[row['Facility Name']]
+
+        refill_days = months * 30
+        next_appointment = last_pickup_date + timedelta(days=refill_days)
+
+        validated_rows.append(
+            Refill(
+                facility=facility_obj,
+                unique_id=unique_id,
+                last_pickup_date=last_pickup_date,
+                next_appointment=next_appointment,
+                months_of_refill_days=refill_days,
+                current_regimen=row['Current ART Regimen'],
+                case_manager=str(row['Case Manager']).strip(),
+                sex=str(row['Sex']).strip(),
+                current_art_status=row['Current ART Status'].strip(),
+            )
+        )
+
+    # Delete old data only after full validation
+    facility_ids = {obj.facility.id for obj in validated_rows}
+
+    with transaction.atomic():
+        for facility_id in facility_ids:
+            Refill.objects.filter(facility_id=facility_id).delete()
+
+        Refill.objects.bulk_create(validated_rows, batch_size=1000)
 
 def upload_excel(request):
     if request.method == 'POST':
