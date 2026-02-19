@@ -141,7 +141,7 @@ def import_refills_from_excel(file):
             )
         )
 
-                defaults={
+            defaults={
                     'last_pickup_date': last_pickup_date,
                     'months_of_refill_days': months,  # store decimal value
                     'next_appointment': next_appointment,
