@@ -17,7 +17,8 @@ from datetime import datetime
 from .forms import UploadExcelForm
 from django.contrib import messages
 from openpyxl.styles import Font
-
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
 
 
 # views.py
