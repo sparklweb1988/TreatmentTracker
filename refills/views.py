@@ -138,6 +138,8 @@ def import_refills_from_excel(file):
                 current_art_status=row['Current ART Status'],
                 art_start_date=art_start_date,
                 vl_sample_collection_date=vl_sample_collection_date,
+            )
+        )
 
                 defaults={
                     'last_pickup_date': last_pickup_date,
