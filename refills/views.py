@@ -219,9 +219,9 @@ def dashboard(request):
 
     month_start = today.replace(day=1)
     month_end = (
-        today.replace(month=today.month+1, day=1) - timedelta(days=1)
+        (today.replace(month=today.month+1, day=1) - timedelta(days=1))
         if today.month != 12
-        else today.replace(year=today.year+1, month=1, day=1) - timedelta(days=1)
+        else (today.replace(year=today.year+1, month=1, day=1) - timedelta(days=1))
     )
 
     facility_id = request.GET.get("facility")
@@ -260,7 +260,7 @@ def dashboard(request):
     quarter_start_month = {"Q1":1, "Q2":4, "Q3":7, "Q4":10}[current_quarter]
     quarter_start = timezone.datetime(today.year, quarter_start_month, 1).date()
     quarter_end = (
-        timezone.datetime(today.year, quarter_start_month+3, 1).date() - timedelta(days=1)
+        (timezone.datetime(today.year, quarter_start_month+3, 1).date() - timedelta(days=1))
         if current_quarter in ["Q1","Q2","Q3"]
         else timezone.datetime(today.year+1, 1, 1).date() - timedelta(days=1)
     )
@@ -287,8 +287,9 @@ def dashboard(request):
     }
 
     # ====================== VL Suppression ======================
-    vl_suppressed = sum(1 for r in refills if r.is_suppressed is True)
-    vl_numerator = sum(1 for r in refills if r.is_vl_eligible)
+    vl_with_result = [r for r in refills if r.vl_result is not None]
+    vl_suppressed = sum(1 for r in vl_with_result if r.is_suppressed)
+    vl_numerator = len(vl_with_result)
     vl_suppression_rate = round((vl_suppressed / vl_numerator * 100), 1) if vl_numerator else 0
 
     # ====================== CONTEXT ======================
@@ -308,7 +309,6 @@ def dashboard(request):
         "vl_coverage": coverage_data["coverage"],
         "vl_suppressed": vl_suppressed,
         "vl_suppression_rate": vl_suppression_rate,
-        "vl_numerator_suppression": vl_numerator,
         "current_year": today.year,
         "current_quarter": current_quarter,
         "today": today,
