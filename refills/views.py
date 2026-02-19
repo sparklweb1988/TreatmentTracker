@@ -38,7 +38,10 @@ def signin_view(request):
 
 
 
-
+def logout_view(request):
+    logout(request)
+    messages.success(request, ' Logout successfully')
+    return redirect('login')
 
 
 from io import BytesIO
