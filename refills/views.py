@@ -33,7 +33,7 @@ def signin_view(request):
         if user is not None:
             login(request, user)
             messages.success(request, 'Login successful!')
-            return redirect('transaction')
+            return redirect('dashboard)
     return render(request, 'signin.html')
 
 
