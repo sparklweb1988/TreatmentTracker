@@ -72,7 +72,6 @@
                         </a>
                     </li>
 
-                    <!-- New Link for Daily Refills -->
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
                             href="{% url 'daily_refill_list' %}">
@@ -80,7 +79,6 @@
                         </a>
                     </li>
 
-                    <!-- Track Refills -->
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'track_refills' %}active{% endif %}"
                             href="{% url 'track_refills' %}">
@@ -88,7 +86,6 @@
                         </a>
                     </li>
 
-                    <!-- Missed Refills -->
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'missed_refills' %}active{% endif %}"
                             href="{% url 'missed_refills' %}">
@@ -96,14 +93,27 @@
                         </a>
                     </li>
 
-                    <!-- Upload Excel -->
+                    <!-- Upload Excel - only for superusers -->
+                    {% if request.user.is_superuser %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'upload_excel' %}active{% endif %}"
-                            href="{% url 'upload_excel' %}">
+                           href="{% url 'upload_excel' %}">
                             Upload Excel
                         </a>
                     </li>
-                 <li><a href="{% url 'logout'%}">Logout</a></li>
+                    {% endif %}
+
+                    <!-- Login / Logout -->
+                    {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    {% endif %}
+
                 </ul>
             </div>
         </div>
