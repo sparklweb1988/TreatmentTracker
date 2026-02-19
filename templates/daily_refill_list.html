@@ -33,7 +33,32 @@
   }
 </style>
 
-<!-- MOBILE VIEW: CARDS -->
+<!-- ================= FILTERS ================= -->
+<form method="get" class="mb-3 row g-2 align-items-center">
+  <div class="col-12 col-md-4">
+    <select name="facility" onchange="this.form.submit()" class="form-select">
+      <option value="">All Facilities</option>
+      {% for facility in facilities %}
+        <option value="{{ facility.id }}" {% if facility.id|stringformat:"s" == selected_facility %} selected {% endif %}>
+          {{ facility.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <select name="case_manager" onchange="this.form.submit()" class="form-select">
+      <option value="">All Case Managers</option>
+      {% for manager in case_managers %}
+        <option value="{{ manager }}" {% if manager == selected_case_manager %} selected {% endif %}>
+          {{ manager }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<!-- ================= MOBILE VIEW: CARDS ================= -->
 <div class="d-block d-md-none cards-container">
   {% for refill in refills %}
     <div class="card {% if refill.next_appointment and refill.next_appointment < today %} bg-danger {% else %} bg-light {% endif %} refill-card">
@@ -46,12 +71,14 @@
         <small>Regimen: {{ refill.current_regimen }}</small><br>
         <small>Case Manager: {{ refill.case_manager }}</small><br>
 
+        <!-- VL Eligibility Status -->
+        <small>VL Status: {{ refill.vl_status }}</small><br>
+
         {% if refill.missed_appointment %}
           <span class="badge bg-danger">Missed Appointment</span><br>
         {% endif %}
         
         <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm mt-2">Add Refills</a>
- 
       </div>
     </div>
   {% empty %}
@@ -63,7 +90,7 @@
   {% endfor %}
 </div>
 
-<!-- DESKTOP VIEW: TABLES -->
+<!-- ================= DESKTOP VIEW: TABLES ================= -->
 <div class="d-none d-md-block">
   <h3>Today's Refills ({{ refills.count }})</h3>
   <div class="table-responsive">
@@ -78,8 +105,8 @@
           <th class="text-danger">Next Appointment</th>
           <th>Regimen</th>
           <th>Case Manager</th>
+          <th>VL Eligibility Status</th> <!-- NEW COLUMN -->
           <th>Actions</th> 
-          
         </tr>
       </thead>
       <tbody>
@@ -93,17 +120,20 @@
           <td>{{ refill.next_appointment }}</td>
           <td>{{ refill.current_regimen }}</td>
           <td>{{ refill.case_manager }}</td>
+
+          <!-- VL Eligibility Status -->
+          <td>{{ refill.vl_status }}</td>
+
           <td>
             {% if refill.missed_appointment %}
               <span class="badge bg-danger">Missed Appointment</span><br>
             {% endif %}
             <a href="{% url 'refill_add_with_id' unique_id=refill.unique_id %}" class="btn btn-primary btn-sm">Add Refills</a>
-          
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="9" class="text-center">No daily refills today</td>
+          <td colspan="10" class="text-center">No daily refills today</td>
         </tr>
         {% endfor %}
       </tbody>

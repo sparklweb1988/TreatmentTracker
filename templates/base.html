@@ -2,145 +2,134 @@
 <!DOCTYPE html>
 <html lang="en">
 
-    <head>
-        <meta charset="UTF-8">
-        <title>ART Treatment Tracker</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+    <meta charset="UTF-8">
+    <title>ART Treatment Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <!-- Bootstrap 5 CSS -->
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        <style>
-            body {
-                background-color: #f4f6f9;
-            }
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
 
-            .navbar-brand {
-                font-weight: 600;
-                letter-spacing: 0.5px;
-            }
+        .navbar-brand {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
 
-            .nav-link.active {
-                font-weight: 500;
-            }
+        .nav-link.active {
+            font-weight: 500;
+        }
 
-            .content-wrapper {
-                min-height: 80vh;
-            }
+        .content-wrapper {
+            min-height: 80vh;
+        }
 
-            footer {
-                background-color: #212529;
-                color: #ffffff;
-                padding: 15px 0;
-                font-size: 14px;
-            }
+        footer {
+            background-color: #212529;
+            color: #ffffff;
+            padding: 15px 0;
+            font-size: 14px;
+        }
 
-            footer p {
-                margin: 0;
-            }
-        </style>
-    </head>
+        footer p {
+            margin: 0;
+        }
+    </style>
+</head>
 
-    <body>
+<body>
 
-        <!-- ================= NAVBAR ================= -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-            <div class="container">
+    <!-- ================= NAVBAR ================= -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container">
 
-                <a class="navbar-brand" href="{% url 'dashboard' %}">
-                    ART Treatment Tracker
-                </a>
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                ART Treatment Tracker
+            </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
 
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
-                                href="{% url 'dashboard' %}">
-                                Dashboard
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                            href="{% url 'dashboard' %}">
+                            Dashboard
+                        </a>
+                    </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'refill_list' %}active{% endif %}"
-                                href="{% url 'refill_list' %}">
-                                Expected List
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'refill_list' %}active{% endif %}"
+                            href="{% url 'refill_list' %}">
+                            Expected List
+                        </a>
+                    </li>
 
+                    <!-- New Link for Daily Refills -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
+                            href="{% url 'daily_refill_list' %}">
+                            Update Refills
+                        </a>
+                    </li>
 
+                    <!-- Track Refills -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'track_refills' %}active{% endif %}"
+                            href="{% url 'track_refills' %}">
+                            Track Refills
+                        </a>
+                    </li>
 
+                    <!-- Missed Refills -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'missed_refills' %}active{% endif %}"
+                            href="{% url 'missed_refills' %}">
+                            Missed Refills
+                        </a>
+                    </li>
 
-                        <!-- New Link for Daily Refills -->
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
-                                href="{% url 'daily_refill_list' %}">
-                                Update Refills
-                            </a>
-                        </li>
+                    <!-- Upload Excel -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'upload_excel' %}active{% endif %}"
+                            href="{% url 'upload_excel' %}">
+                            Upload Excel
+                        </a>
+                    </li>
 
-
-
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
-                                href="{% url 'track_refills' %}">
-                                Track Refills
-                            </a>
-                        </li>
-
-
-
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'refill_add' %}active{% endif %}"
-                                href="{% url 'missed_refills' %}">
-                                Missed Refills
-                            </a>
-                        </li>
-
-
-
-
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'upload_excel' %}active{% endif %}"
-                                href="{% url 'upload_excel' %}">
-                                Upload Excel
-                            </a>
-                        </li>
-
-                    </ul>
-                </div>
+                </ul>
             </div>
-        </nav>
-        <!-- ================= END NAVBAR ================= -->
-
-
-        <!-- ================= PAGE CONTENT ================= -->
-        <div class="container mt-4 content-wrapper">
-            {% block content %}
-            {% endblock %}
         </div>
-        <!-- ================= END CONTENT ================= -->
+    </nav>
+    <!-- ================= END NAVBAR ================= -->
 
+    <!-- ================= PAGE CONTENT ================= -->
+    <div class="container mt-4 content-wrapper">
+        {% block content %}
+        {% endblock %}
+    </div>
+    <!-- ================= END CONTENT ================= -->
 
-        <!-- ================= FOOTER ================= -->
-        <footer class="text-center">
-            <div class="container">
-                <p>
-                    © 2026 ART Treatment Tracker |
-                    Multi-Facility Refill Monitoring System
-                </p>
-            </div>
-        </footer>
-        <!-- ================= END FOOTER ================= -->
+    <!-- ================= FOOTER ================= -->
+    <footer class="text-center">
+        <div class="container">
+            <p>
+                © 2026 ART Treatment Tracker | Multi-Facility Refill Monitoring System
+            </p>
+        </div>
+    </footer>
+    <!-- ================= END FOOTER ================= -->
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-        <!-- Bootstrap JS -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-    </body>
+</body>
 
 </html>

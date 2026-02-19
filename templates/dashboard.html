@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        <!-- 🔥 NEW IIT CARD -->
+        <!-- IIT -->
         <div class="col-md-3">
             <div class="card text-white bg-dark mb-3 shadow border-danger">
                 <div class="card-body text-center">
@@ -86,6 +86,71 @@
                 </div>
             </div>
         </div>
+
+        <!-- ============================= -->
+        <!-- 🔥 NEW VIRAL LOAD CARDS 🔥 -->
+        <!-- ============================= -->
+
+        <!-- VL Eligible (Denominator) -->
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        VL Eligible ({{ current_quarter }} {{ current_year }})
+                    </h6>
+                    <h2 class="card-text">
+                        {{ vl_denominator }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- VL Collected (Numerator) -->
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3 shadow">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        VL Collected ({{ current_quarter }} {{ current_year }})
+                    </h6>
+                    <h2 class="card-text">
+                        {{ vl_numerator }}
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- VL Coverage % -->
+        <div class="col-md-3">
+            <div class="card text-white bg-dark mb-3 shadow border-success">
+                <div class="card-body text-center">
+                    <h6 class="card-title">
+                        VL Coverage %
+                    </h6>
+                    <h2 class="card-text fw-bold text-success">
+                        {{ vl_coverage }}%
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- VL Suppression -->
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3 shadow border-light">
+            <div class="card-body text-center">
+                <h6 class="card-title">
+                    VL Suppression % ({{ current_quarter }} {{ current_year }})
+                </h6>
+                <h2 class="card-text fw-bold">
+                    {{ vl_suppression_rate }}%
+                </h2>
+                <small>
+                    Suppressed: {{ vl_suppressed }} / {{ vl_numerator }}
+                </small>
+            </div>
+        </div>
+    </div>
+
 
     </div>
 

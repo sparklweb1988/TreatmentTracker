@@ -8,9 +8,9 @@
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
                     {% if form.instance.pk %}
-                    Update Refill Record
+                        Update Refill Record
                     {% else %}
-                    Add New Refill
+                        Add New Refill
                     {% endif %}
                 </h5>
             </div>
@@ -21,6 +21,7 @@
                     {% csrf_token %}
 
                     <div class="row">
+
                         <!-- Facility -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Facility</label>
@@ -31,6 +32,46 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Unique ID</label>
                             {{ form.unique_id }}
+                        </div>
+
+                        <!-- ART Start Date -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ART Start Date (yyyy-mm-dd)</label>
+                            {{ form.art_start_date }}
+                        </div>
+
+                        <!-- Viral Load Sample Collection -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date of Viral Load Sample Collection (yyyy-mm-dd)</label>
+                            {{ form.vl_sample_collection_date }}
+                        </div>
+
+                        <!-- Viral Load Result -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Viral Load Result (copies/ml)</label>
+                            {{ form.vl_result }}
+                        </div>
+
+                        <!-- VL Eligibility Badge -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">VL Eligibility Status</label><br>
+                            {% if form.instance.is_vl_eligible %}
+                                <span class="badge bg-success">Eligible (≥180 Days on ART)</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Eligible</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Suppression Badge -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Viral Load Suppression Status</label><br>
+                            {% if form.instance.is_suppressed == True %}
+                                <span class="badge bg-success">Suppressed (&lt;1000)</span>
+                            {% elif form.instance.is_suppressed == False %}
+                                <span class="badge bg-danger">Not Suppressed (≥1000)</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">No VL Result</span>
+                            {% endif %}
                         </div>
 
                         <!-- Last Pickup Date -->
@@ -73,15 +114,9 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Next Appointment</label>
                             <input type="text" class="form-control"
-                                value="{{ form.instance.next_appointment|date:'Y-m-d' }}" readonly>
+                                   value="{{ form.instance.next_appointment|date:'Y-m-d' }}" readonly>
                         </div>
 
-                        <!-- Expected IIT Date -->
-                        <!-- <div class="col-md-6 mb-3">
-                            <label class="form-label">Expected IIT Date</label>
-                            <input type="text" class="form-control"
-                                value="{{ form.instance.expected_iit_date|date:'Y-m-d' }}" readonly>
-                        </div> -->
                     </div>
 
                     <div class="d-flex justify-content-between mt-3">
@@ -93,6 +128,7 @@
                         </button>
                     </div>
                 </form>
+
             </div>
         </div>
     </div>
