@@ -26,15 +26,11 @@ from openpyxl.styles import Font
 from io import BytesIO
 
 
-
-
-
 VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
 
 
 def import_refills_from_excel(file):
     df = pd.read_excel(file)
-
 
     # Updated required columns including the new VL columns
 
@@ -45,6 +41,7 @@ def import_refills_from_excel(file):
     # ================= SAFE FILE READ =================
     file.seek(0)
     df = pd.read_excel(BytesIO(file.read()))
+
 
 def import_refills_from_excel(file):
     """
@@ -58,9 +55,7 @@ def import_refills_from_excel(file):
     file.seek(0)
     df = pd.read_excel(file)
 
-
     # ================= REQUIRED COLUMNS =================
-
     required_columns = [
         'Unique Id',
         'Last Pickup Date (yyyy-mm-dd)',
@@ -79,20 +74,12 @@ def import_refills_from_excel(file):
         if col not in df.columns:
             raise ValidationError(f"Missing column: {col}")
 
-
     # Only include Active / Active Restart patients
-
-
     # ================= FILTER ACTIVE PATIENTS =================
-
-    # Filter only Active patients
-
-
     df = df[df['Current ART Status'].isin(['Active', 'Active Restart'])]
 
     if df.empty:
         raise ValidationError("No Active or Active Restart patients found.")
-
 
     # Clean facility names
     df['Facility Name'] = df['Facility Name'].astype(str).str.strip()
@@ -101,10 +88,8 @@ def import_refills_from_excel(file):
     if not facilities.exists():
         raise ValidationError("No matching facilities found in database.")
 
-
     # ================= TRACK DELETED FACILITIES =================
     deleted_facilities = set()
-
 
     facility_map = {f.name: f for f in facilities}
 
@@ -120,8 +105,12 @@ def import_refills_from_excel(file):
         next_appointment = last_pickup + timedelta(days=months * 30)
 
         # Parse new columns safely
-        art_start_date = pd.to_datetime(row['ART Start Date (yyyy-mm-dd)']).date() if pd.notnull(row['ART Start Date (yyyy-mm-dd)']) else None
-        vl_sample_collection_date = pd.to_datetime(row['Date of Viral Load Sample Collection (yyyy-mm-dd)']).date() if pd.notnull(row['Date of Viral Load Sample Collection (yyyy-mm-dd)']) else None
+        art_start_date = pd.to_datetime(
+            row['ART Start Date (yyyy-mm-dd)']).date() if pd.notnull(
+            row['ART Start Date (yyyy-mm-dd)']) else None
+        vl_sample_collection_date = pd.to_datetime(
+            row['Date of Viral Load Sample Collection (yyyy-mm-dd)']).date() if pd.notnull(
+            row['Date of Viral Load Sample Collection (yyyy-mm-dd)']) else None
 
         # Append refill object with new fields
         new_refills.append(
@@ -141,24 +130,19 @@ def import_refills_from_excel(file):
             )
         )
 
-            defaults={
-                    'last_pickup_date': last_pickup_date,
-                    'months_of_refill_days': months,  # store decimal value
-                    'next_appointment': next_appointment,
-                    'current_regimen': str(row['Current ART Regimen']).strip(),
-                    'case_manager': str(row['Case Manager']).strip(),
-                    'sex': str(row['Sex']).strip(),
-                    'current_art_status': row['Current ART Status'].strip(),
-                }
+        defaults = {
+            'last_pickup_date': last_pickup,
+            'months_of_refill_days': months,  # store decimal value
+            'next_appointment': next_appointment,
+            'current_regimen': str(row['Current ART Regimen']).strip(),
+            'case_manager': str(row['Case Manager']).strip(),
+            'sex': str(row['Sex']).strip(),
+            'current_art_status': row['Current ART Status'].strip(),
+        }
 
     # Normalize facility names
     df['Facility Name'] = df['Facility Name'].astype(str).str.strip().str.lower()
-
-    facilities = {
-        f.name.strip().lower(): f
-        for f in Facility.objects.all()
-    }
-
+    facilities = {f.name.strip().lower(): f for f in Facility.objects.all()}
     missing_facilities = set(df['Facility Name'].unique()) - set(facilities.keys())
 
     if missing_facilities:
@@ -175,10 +159,7 @@ def import_refills_from_excel(file):
         if pd.isnull(row['Last Pickup Date (yyyy-mm-dd)']):
             raise ValidationError(
                 f"Missing Last Pickup Date for Unique Id {unique_id}"
-
-
             )
-        )
 
     # Delete existing refills for these facilities and bulk insert new ones
     with transaction.atomic():
@@ -188,59 +169,91 @@ def import_refills_from_excel(file):
 
     return len(new_refills)
 
-
-
-
-        try:
-            last_pickup_date = pd.to_datetime(
-                row['Last Pickup Date (yyyy-mm-dd)']
-            ).date()
-        except Exception:
-            raise ValidationError(
-                f"Invalid Last Pickup Date format for Unique Id {unique_id}"
-            )
-
-        try:
-            months = int(row['Months of ARV Refill'])
-        except Exception:
-            raise ValidationError(
-                f"Invalid Months of ARV Refill for Unique Id {unique_id}"
-            )
-
-        if months not in VALID_REFILL_MONTHS:
-            raise ValidationError(
-                f"Invalid refill duration {months} months "
-                f"for Unique Id {unique_id}. Allowed values: {VALID_REFILL_MONTHS}"
-            )
-
-        facility_obj = facilities[row['Facility Name']]
-
-        refill_days = months * 30
-        next_appointment = last_pickup_date + timedelta(days=refill_days)
-
-        validated_rows.append(
-            Refill(
-                facility=facility_obj,
-                unique_id=unique_id,
-                last_pickup_date=last_pickup_date,
-                next_appointment=next_appointment,
-                months_of_refill_days=refill_days,
-                current_regimen=row['Current ART Regimen'],
-                case_manager=str(row['Case Manager']).strip(),
-                sex=str(row['Sex']).strip(),
-                current_art_status=row['Current ART Status'].strip(),
-            )
+    try:
+        last_pickup_date = pd.to_datetime(
+            row['Last Pickup Date (yyyy-mm-dd)']
+        ).date()
+    except Exception:
+        raise ValidationError(
+            f"Invalid Last Pickup Date format for Unique Id {unique_id}"
         )
 
-    # Delete old data only after full validation
-    facility_ids = {obj.facility.id for obj in validated_rows}
+    try:
+        months = int(row['Months of ARV Refill'])
+    except Exception:
+        raise ValidationError(
+            f"Invalid Months of ARV Refill for Unique Id {unique_id}"
+        )
 
-    with transaction.atomic():
-        for facility_id in facility_ids:
-            Refill.objects.filter(facility_id=facility_id).delete()
+    if months not in VALID_REFILL_MONTHS:
+        raise ValidationError(
+            f"Invalid refill duration {months} months "
+            f"for Unique Id {unique_id}. Allowed values: {VALID_REFILL_MONTHS}"
+        )
 
-        Refill.objects.bulk_create(validated_rows, batch_size=1000)
+    facility_obj = facilities[row['Facility Name']]
 
+    refill_days = months * 30
+    next_appointment = last_pickup_date + timedelta(days=refill_days)
+
+    validated_rows.append(
+        Refill(
+            facility=facility_obj,
+            unique_id=unique_id,
+            last_pickup_date=last_pickup_date,
+            next_appointment=next_appointment,
+            months_of_refill_days=refill_days,
+            current_regimen=row['Current ART Regimen'],
+            case_manager=str(row['Case Manager']).strip(),
+            sex=str(row['Sex']).strip(),
+            current_art_status=row['Current ART Status'].strip(),
+        )
+    )
+
+# Delete old data only after full validation
+facility_ids = {obj.facility.id for obj in validated_rows}
+
+with transaction.atomic():
+    for facility_id in facility_ids:
+        Refill.objects.filter(facility_id=facility_id).delete()
+
+    Refill.objects.bulk_create(validated_rows, batch_size=1000)
+
+
+def upload_excel(request):
+    if request.method == 'POST':
+        form = UploadExcelForm(request.POST, request.FILES)
+        excel_file = request.FILES.get('file')
+
+        if excel_file and excel_file.size > 1073741824:  # 1GB
+            return render(request, 'upload.html', {
+                'form': form,
+                'error': "File size exceeds the 1GB limit."
+            })
+
+        if form.is_valid():
+            try:
+                import_refills_from_excel(excel_file)
+                return redirect('refill_list')
+            except ValidationError as e:
+                return render(request, 'upload.html', {
+                    'form': form,
+                    'error': str(e)
+                })
+        else:
+            return render(request, 'upload.html', {'form': form})
+    else:
+        form = UploadExcelForm()
+
+    return render(request, 'upload.html', {'form': form})
+
+
+
+
+    
+
+    # Normalize facility names
+    
 def upload_excel(request):
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
