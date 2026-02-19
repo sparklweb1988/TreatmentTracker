@@ -23,6 +23,24 @@ from openpyxl.styles import Font
 # views.py
 
 
+
+def signin_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('pw')
+
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            login(request, user)
+            messages.success(request, 'Login successful!')
+            return redirect('transaction')
+    return render(request, 'signin.html')
+
+
+
+
+
+
 from io import BytesIO
 
 VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
