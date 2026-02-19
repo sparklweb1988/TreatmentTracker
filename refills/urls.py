@@ -1,7 +1,9 @@
 from django.urls import path, re_path  # Import re_path for regex matching
 from . import views
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
+    path('', views.signin_view, name='login'),
+    path('logout', views.logout_view, name='logout'),
+    path('dashboard/, views.dashboard, name='dashboard'),
     path('refills/', views.refill_list, name='refill_list'),
     path('refills/add/', views.refill_create, name='refill_add'),
     path('refills/edit/<int:pk>/', views.refill_update, name='refill_edit'),
