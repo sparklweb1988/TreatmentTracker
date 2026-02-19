@@ -58,60 +58,52 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
 
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
-                            href="{% url 'dashboard' %}">
-                            Dashboard
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'refill_list' %}active{% endif %}"
-                            href="{% url 'refill_list' %}">
-                            Expected List
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
-                            href="{% url 'daily_refill_list' %}">
-                            Update Refills
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'track_refills' %}active{% endif %}"
-                            href="{% url 'track_refills' %}">
-                            Track Refills
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'missed_refills' %}active{% endif %}"
-                            href="{% url 'missed_refills' %}">
-                            Missed Refills
-                        </a>
-                    </li>
-
-                    <!-- Upload Excel - only for superusers -->
-                    {% if request.user.is_superuser %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'upload_excel' %}active{% endif %}"
-                           href="{% url 'upload_excel' %}">
-                            Upload Excel
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    <!-- Login / Logout -->
                     {% if request.user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                    </li>
+
+                        <!-- Navigation for all logged-in users -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                               href="{% url 'dashboard' %}">Dashboard</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'refill_list' %}active{% endif %}"
+                               href="{% url 'refill_list' %}">Expected List</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'daily_refill_list' %}active{% endif %}"
+                               href="{% url 'daily_refill_list' %}">Update Refills</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'track_refills' %}active{% endif %}"
+                               href="{% url 'track_refills' %}">Track Refills</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'missed_refills' %}active{% endif %}"
+                               href="{% url 'missed_refills' %}">Missed Refills</a>
+                        </li>
+
+                        <!-- Upload Excel visible only to superusers -->
+                        {% if request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'upload_excel' %}active{% endif %}"
+                               href="{% url 'upload_excel' %}">Upload Excel</a>
+                        </li>
+                        {% endif %}
+
+                        <!-- Logout -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                        </li>
+
                     {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
-                    </li>
+                        <!-- Show only login for anonymous users -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
                     {% endif %}
 
                 </ul>
