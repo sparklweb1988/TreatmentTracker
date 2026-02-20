@@ -26,6 +26,8 @@ class Facility(models.Model):
 
 
 
+
+
 class Refill(models.Model):
 
     # Choices for gender
@@ -128,15 +130,15 @@ class Refill(models.Model):
             if vl_date and (today - vl_date).days < 180:
                 return False
             return True
-        
-        
+
+    # ===================== VL STATUS (read-only) =====================
     @property
     def vl_status(self):
         """
         Return human-readable VL eligibility status for template.
+        This is read-only to avoid setter errors.
         """
         return "Eligible" if self.is_vl_eligible else "Not Eligible"
-
 
     @property
     def is_suppressed(self):
