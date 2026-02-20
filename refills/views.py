@@ -48,7 +48,7 @@ def logout_view(request):
 from io import BytesIO
 
 VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
-
+@login_required
 def import_refills_from_excel(file):
     """
     Import refill data from Excel containing multiple facilities.
@@ -173,7 +173,7 @@ def import_refills_from_excel(file):
 
 
     # Normalize facility names
-    
+@login_required
 def upload_excel(request):
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
@@ -201,6 +201,10 @@ def upload_excel(request):
 
     return render(request, 'upload.html', {'form': form})
 
+
+
+
+@login_required
 def upload_excel(request):
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
@@ -234,7 +238,7 @@ def upload_excel(request):
 # ================================
 
 
-
+@login_required
 def dashboard(request):
     today = timezone.now().date()
     week_end = today + timedelta(days=7)
@@ -354,7 +358,7 @@ def dashboard(request):
 
 
 
-
+@login_required
 def refill_list(request):
     today = timezone.now().date()
     week_end = today + timedelta(days=7)
@@ -485,7 +489,10 @@ def refill_list(request):
     return render(request, "refill_list.html", context)
 
 
+
+
 # =================== EXCEL EXPORT ===================
+
 def export_refills_to_excel(refills):
     today = timezone.now().date()
     wb = openpyxl.Workbook()
@@ -529,7 +536,7 @@ def export_refills_to_excel(refills):
     return response
 
 
-
+@login_required
 def refill_create(request, unique_id=None):
     if unique_id:
         # Fetch the refill by unique_id if passed
@@ -572,7 +579,7 @@ def refill_create(request, unique_id=None):
 
 
 
-
+@login_required
 def refill_update(request, pk):
     """
     Update an existing refill entry and auto-recalculate next appointment.
@@ -604,7 +611,7 @@ def refill_update(request, pk):
 
 
 
-
+@login_required
 def refill_add_or_update(request, pk=None):
     today = timezone.now().date()
 
@@ -638,7 +645,7 @@ def refill_add_or_update(request, pk=None):
 
 
 
-
+@login_required
 def track_refills(request):
     today = timezone.now().date()
     start_of_week = today - timedelta(days=today.weekday())
@@ -817,7 +824,7 @@ def export_track_refills_to_excel(refills):
 
 
 
-
+@login_required
 def daily_refill_list(request):
     today = timezone.now().date()
 
@@ -863,7 +870,7 @@ def daily_refill_list(request):
 
 
 
-
+@login_required
 def missed_refills(request):
     today = timezone.now().date()
 
