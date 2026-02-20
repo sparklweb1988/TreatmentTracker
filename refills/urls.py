@@ -14,5 +14,6 @@ urlpatterns = [
     # Update URL pattern for 'refill_add_with_id' to handle unique_id with slashes
     re_path(r'^refills/add/(?P<unique_id>.+)/$', views.refill_create, name='refill_add_with_id'),  
     path('missed-refills/', views.missed_refills, name='missed_refills'),
+    path('track-vl/', views.track_vl, name='track_vl'),
 ]
 
