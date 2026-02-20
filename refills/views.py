@@ -997,6 +997,8 @@ def missed_refills(request):
 
 
 
+
+
 @login_required
 def track_vl(request):
     today = timezone.now().date()
@@ -1004,9 +1006,9 @@ def track_vl(request):
     # ================== FILTERS ==================
     facility_id = request.GET.get("facility")
     selected_case_manager = request.GET.get("case_manager")
+    selected_unique_id = request.GET.get("unique_id")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
-    unique_id = request.GET.get("unique_id")  # no 'None' check
 
     # Safe date parsing
     start_date_obj = None
@@ -1015,15 +1017,15 @@ def track_vl(request):
         try:
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            start_date_obj = None
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            end_date_obj = None
 
     facilities = Facility.objects.all()
-    refills = Refill.objects.all()
+    refills = Refill.objects.all().order_by('-vl_sample_collection_date')
 
     # Apply filters
     if facility_id:
@@ -1033,19 +1035,19 @@ def track_vl(request):
             pass
     if selected_case_manager:
         refills = refills.filter(case_manager=selected_case_manager)
-    if unique_id:
-        refills = refills.filter(unique_id__icontains=unique_id)
+    if selected_unique_id:
+        refills = refills.filter(unique_id__icontains=selected_unique_id)
     if start_date_obj:
         refills = refills.filter(vl_sample_collection_date__gte=start_date_obj)
     if end_date_obj:
         refills = refills.filter(vl_sample_collection_date__lte=end_date_obj)
 
     # ================== PAGINATION ==================
-    paginator = Paginator(refills.order_by('-vl_sample_collection_date'), 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    paginator = Paginator(refills, 10)  # 10 per page
+    page_number = request.GET.get("page")
+    vl_refills = paginator.get_page(page_number)
 
-    # Case managers for dropdown
+    # ================== CASE MANAGERS ==================
     case_managers_qs = (
         Refill.objects.exclude(case_manager__isnull=True)
         .exclude(case_manager__exact="")
@@ -1054,8 +1056,8 @@ def track_vl(request):
     )
     case_managers = sorted({cm.strip() for cm in case_managers_qs if cm and cm.strip()})
 
-    # Excel download
-    if 'download' in request.GET:
+    # ================== EXCEL DOWNLOAD ==================
+    if "download" in request.GET:
         return export_vl_to_excel(refills)
 
     context = {
@@ -1063,42 +1065,39 @@ def track_vl(request):
         "selected_facility": facility_id,
         "case_managers": case_managers,
         "selected_case_manager": selected_case_manager,
-        "selected_unique_id": unique_id,
+        "selected_unique_id": selected_unique_id,
         "selected_start_date": start_date,
         "selected_end_date": end_date,
-        "refills": page_obj,
+        "vl_refills": vl_refills,
     }
+
     return render(request, "track_vl.html", context)
 
 
 def export_vl_to_excel(refills):
-    """
-    Export VL tracking to Excel
-    """
     today = timezone.now().date()
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "VL Tracking"
+    ws.title = "Track VL"
 
-    headers = ['Unique ID', 'VL Sample Date', 'Last Pickup Date', 'Case Manager', 'Facility']
+    # Header
+    headers = ["Unique ID", "Facility", "Date VL Collected", "Date Refilled", "Case Manager"]
     ws.append(headers)
 
     for refill in refills:
-        vl_date = refill.vl_sample_collection_date.strftime("%Y-%m-%d") if refill.vl_sample_collection_date else ""
-        last_pickup = refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else ""
         row = [
             refill.unique_id,
-            vl_date,
-            last_pickup,
-            refill.case_manager or "",
             refill.facility.name if refill.facility else "",
+            refill.vl_sample_collection_date.strftime("%Y-%m-%d") if refill.vl_sample_collection_date else "",
+            refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "",
+            refill.case_manager or "",
         ]
         ws.append(row)
 
     response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response['Content-Disposition'] = f'attachment; filename="VL_Tracking_{today}.xlsx"'
+    response["Content-Disposition"] = f'attachment; filename="Track_VL_{today}.xlsx"'
     wb.save(response)
     return response
 
