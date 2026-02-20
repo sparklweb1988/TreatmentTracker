@@ -20,6 +20,13 @@
             letter-spacing: 0.5px;
         }
 
+        /* Larger navbar logo */
+        .navbar-logo {
+            width: 60px;  /* wider */
+            height: 60px; /* maintain aspect ratio */
+            object-fit: cover;
+        }
+
         .nav-link.active {
             font-weight: 500;
         }
@@ -43,6 +50,14 @@
             border-radius: 8px;
             box-shadow: 0 6px 15px rgba(0,0,0,0.1);
         }
+
+        /* Optional: responsive logo for small screens */
+        @media (max-width: 768px) {
+            .navbar-logo {
+                width: 45px;
+                height: 45px;
+            }
+        }
     </style>
 </head>
 
@@ -53,7 +68,7 @@
         <div class="container">
 
             <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
-                <img src="{% static 'images/logo.jpeg' %}" alt="Logo" width="35" height="35" class="me-2">
+                <img src="{% static 'images/logo.jpeg' %}" alt="Logo" class="navbar-logo me-2">
                 <span>Refill+</span>
             </a>
 
@@ -81,24 +96,16 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'refill_list' %}">
-                                        Expected List
-                                    </a>
+                                    <a class="dropdown-item" href="{% url 'refill_list' %}">Expected List</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'daily_refill_list' %}">
-                                        Update Refills
-                                    </a>
+                                    <a class="dropdown-item" href="{% url 'daily_refill_list' %}">Update Refills</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'track_refills' %}">
-                                        Track Refills
-                                    </a>
+                                    <a class="dropdown-item" href="{% url 'track_refills' %}">Track Refills</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'missed_refills' %}">
-                                        Missed Refills
-                                    </a>
+                                    <a class="dropdown-item" href="{% url 'missed_refills' %}">Missed Refills</a>
                                 </li>
                             </ul>
                         </li>
@@ -113,9 +120,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a class="dropdown-item" href="{% url 'track_vl' %}">
-                                        Track Viral Load
-                                    </a>
+                                    <a class="dropdown-item" href="{% url 'track_vl' %}">Track Viral Load</a>
                                 </li>
                             </ul>
                         </li>
