@@ -1,72 +1,89 @@
-@login_required
-def track_vl(request):
-    today = timezone.now().date()
+{% extends 'base.html' %}
 
-    # ================== FILTERS ==================
-    facility_id = request.GET.get("facility")
-    selected_case_manager = request.GET.get("case_manager")
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-    unique_id = request.GET.get("unique_id")  # no 'None' check
+{% block content %}
+<div class="container mt-4">
 
-    # Safe date parsing
-    start_date_obj = None
-    end_date_obj = None
-    if start_date:
-        try:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
-        except ValueError:
-            pass
-    if end_date:
-        try:
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
-        except ValueError:
-            pass
+    <h4 class="mb-3">Track Viral Load</h4>
 
-    facilities = Facility.objects.all()
-    refills = Refill.objects.all()
+    <!-- ================== FILTER FORM ================== -->
+    <form method="get" class="row g-2 mb-3">
 
-    # Apply filters
-    if facility_id:
-        try:
-            refills = refills.filter(facility_id=int(facility_id))
-        except ValueError:
-            pass
-    if selected_case_manager:
-        refills = refills.filter(case_manager=selected_case_manager)
-    if unique_id:
-        refills = refills.filter(unique_id__icontains=unique_id)
-    if start_date_obj:
-        refills = refills.filter(vl_sample_collection_date__gte=start_date_obj)
-    if end_date_obj:
-        refills = refills.filter(vl_sample_collection_date__lte=end_date_obj)
+        <!-- Facility Filter -->
+        <div class="col-md-2">
+            <select name="facility" class="form-select">
+                <option value="">All Facilities</option>
+                {% for facility in facilities %}
+                    <option value="{{ facility.id }}" {% if selected_facility|default_if_none:'' == facility.id|stringformat:"s" %}selected{% endif %}>
+                        {{ facility.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
 
-    # ================== PAGINATION ==================
-    paginator = Paginator(refills.order_by('-vl_sample_collection_date'), 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+        <!-- Case Manager Filter -->
+        <div class="col-md-2">
+            <select name="case_manager" class="form-select">
+                <option value="">All Case Managers</option>
+                {% for cm in case_managers %}
+                    <option value="{{ cm }}" {% if selected_case_manager == cm %}selected{% endif %}>{{ cm }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-    # Case managers for dropdown
-    case_managers_qs = (
-        Refill.objects.exclude(case_manager__isnull=True)
-        .exclude(case_manager__exact="")
-        .values_list("case_manager", flat=True)
-        .distinct()
-    )
-    case_managers = sorted({cm.strip() for cm in case_managers_qs if cm and cm.strip()})
+        <!-- Unique ID Filter -->
+        <div class="col-md-2">
+            <input type="text" name="unique_id" class="form-control" placeholder="Unique ID" value="{{ selected_unique_id|default_if_none:'' }}">
+        </div>
 
-    # Excel download
-    if 'download' in request.GET:
-        return export_vl_to_excel(refills)
+        <!-- Start Date Filter -->
+        <div class="col-md-2">
+            <input type="date" name="start_date" class="form-control" value="{{ selected_start_date|default_if_none:'' }}">
+        </div>
 
-    context = {
-        "facilities": facilities,
-        "selected_facility": facility_id,
-        "case_managers": case_managers,
-        "selected_case_manager": selected_case_manager,
-        "selected_unique_id": unique_id,
-        "selected_start_date": start_date,
-        "selected_end_date": end_date,
-        "refills": page_obj,
-    }
-    return render(request, "track_vl.html", context)
+        <!-- End Date Filter -->
+        <div class="col-md-2">
+            <input type="date" name="end_date" class="form-control" value="{{ selected_end_date|default_if_none:'' }}">
+        </div>
+
+        <!-- Filter & Download Buttons -->
+        <div class="col-md-2 d-flex">
+            <button type="submit" class="btn btn-primary me-1">Filter</button>
+            <a href="?download=1" class="btn btn-success">Download Excel</a>
+        </div>
+    </form>
+
+    <!-- ================== TABLE ================== -->
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Unique ID</th>
+                    <th>Date VL Collected</th>
+                    <th>Date Refilled</th>
+                    <th>Case Manager</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for refill in refills %}
+                    <tr>
+                        <td>{{ refill.unique_id }}</td>
+                        <td>{{ refill.vl_sample_collection_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ refill.last_pickup_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ refill.case_manager|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No records found</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ================== PAGINATION ================== -->
+    <div class="d-flex justify-content-center mt-3">
+        <span>Page {{ refills.number }} of {{ refills.paginator.num_pages }}</span>
+    </div>
+
+</div>
+{% endblock %}
