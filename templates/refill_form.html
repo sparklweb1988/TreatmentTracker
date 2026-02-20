@@ -1,134 +1,136 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
 
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    {% if form.instance.pk %}
-                        Update Refill Record
-                    {% else %}
-                        Add New Refill
-                    {% endif %}
-                </h5>
-            </div>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if form.instance.pk %}
+                            Update Refill Record
+                        {% else %}
+                            Add New Refill
+                        {% endif %}
+                    </h5>
+                </div>
 
-            <div class="card-body">
+                <div class="card-body">
 
-                <form method="post">
-                    {% csrf_token %}
+                    <form method="post">
+                        {% csrf_token %}
 
-                    <div class="row">
+                        <div class="row g-3">
 
-                        <!-- Facility -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Facility</label>
-                            {{ form.facility }}
+                            <!-- Facility -->
+                            <div class="col-md-6">
+                                <label class="form-label">Facility</label>
+                                {{ form.facility }}
+                            </div>
+
+                            <!-- Unique ID -->
+                            <div class="col-md-6">
+                                <label class="form-label">Unique ID</label>
+                                {{ form.unique_id }}
+                            </div>
+
+                            <!-- ART Start Date -->
+                            <div class="col-md-6">
+                                <label class="form-label">ART Start Date (yyyy-mm-dd)</label>
+                                {{ form.art_start_date }}
+                            </div>
+
+                            <!-- Viral Load Sample Collection -->
+                            <div class="col-md-6">
+                                <label class="form-label">Date of Viral Load Sample Collection (yyyy-mm-dd)</label>
+                                {{ form.vl_sample_collection_date }}
+                            </div>
+
+                            <!-- Viral Load Result -->
+                            <div class="col-md-6">
+                                <label class="form-label">Viral Load Result (copies/ml)</label>
+                                {{ form.vl_result }}
+                            </div>
+
+                            <!-- VL Eligibility Badge -->
+                            <div class="col-md-6">
+                                <label class="form-label">VL Eligibility Status</label><br>
+                                {% if form.instance.is_vl_eligible %}
+                                    <span class="badge bg-success">Eligible (≥180 Days on ART)</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Not Eligible</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Suppression Badge -->
+                            <div class="col-md-6">
+                                <label class="form-label">Viral Load Suppression Status</label><br>
+                                {% if form.instance.is_suppressed == True %}
+                                    <span class="badge bg-success">Suppressed (&lt;1000)</span>
+                                {% elif form.instance.is_suppressed == False %}
+                                    <span class="badge bg-danger">Not Suppressed (≥1000)</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">No VL Result</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Last Pickup Date -->
+                            <div class="col-md-6">
+                                <label class="form-label">Last Pickup Date</label>
+                                {{ form.last_pickup_date }}
+                            </div>
+
+                            <!-- Sex -->
+                            <div class="col-md-6">
+                                <label class="form-label">Sex</label>
+                                {{ form.sex }}
+                            </div>
+
+                            <!-- Refill Duration -->
+                            <div class="col-md-6">
+                                <label class="form-label">Refill Duration (Days)</label>
+                                {{ form.months_of_refill_days }}
+                            </div>
+
+                            <!-- Current Regimen -->
+                            <div class="col-md-6">
+                                <label class="form-label">Current Regimen</label>
+                                {{ form.current_regimen }}
+                            </div>
+
+                            <!-- Case Manager -->
+                            <div class="col-md-6">
+                                <label class="form-label">Case Manager</label>
+                                {{ form.case_manager }}
+                            </div>
+
+                            <!-- Remark -->
+                            <div class="col-md-12">
+                                <label class="form-label">Reasons for missed appointment</label>
+                                {{ form.remark }}
+                            </div>
+
+                            <!-- Next Appointment -->
+                            <div class="col-md-6">
+                                <label class="form-label">Next Appointment</label>
+                                <input type="text" class="form-control"
+                                       value="{{ form.instance.next_appointment|date:'Y-m-d' }}" readonly>
+                            </div>
+
                         </div>
 
-                        <!-- Unique ID -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Unique ID</label>
-                            {{ form.unique_id }}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'refill_list' %}" class="btn btn-secondary">
+                                Back
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                Save Record
+                            </button>
                         </div>
+                    </form>
 
-                        <!-- ART Start Date -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">ART Start Date (yyyy-mm-dd)</label>
-                            {{ form.art_start_date }}
-                        </div>
-
-                        <!-- Viral Load Sample Collection -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Date of Viral Load Sample Collection (yyyy-mm-dd)</label>
-                            {{ form.vl_sample_collection_date }}
-                        </div>
-
-                        <!-- Viral Load Result -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Viral Load Result (copies/ml)</label>
-                            {{ form.vl_result }}
-                        </div>
-
-                        <!-- VL Eligibility Badge -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">VL Eligibility Status</label><br>
-                            {% if form.instance.is_vl_eligible %}
-                                <span class="badge bg-success">Eligible (≥180 Days on ART)</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Not Eligible</span>
-                            {% endif %}
-                        </div>
-
-                        <!-- Suppression Badge -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Viral Load Suppression Status</label><br>
-                            {% if form.instance.is_suppressed == True %}
-                                <span class="badge bg-success">Suppressed (&lt;1000)</span>
-                            {% elif form.instance.is_suppressed == False %}
-                                <span class="badge bg-danger">Not Suppressed (≥1000)</span>
-                            {% else %}
-                                <span class="badge bg-warning text-dark">No VL Result</span>
-                            {% endif %}
-                        </div>
-
-                        <!-- Last Pickup Date -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Last Pickup Date</label>
-                            {{ form.last_pickup_date }}
-                        </div>
-
-                        <!-- Sex -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Sex</label>
-                            {{ form.sex }}
-                        </div>
-
-                        <!-- Refill Duration -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Refill Duration (Days)</label>
-                            {{ form.months_of_refill_days }}
-                        </div>
-
-                        <!-- Current Regimen -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Current Regimen</label>
-                            {{ form.current_regimen }}
-                        </div>
-
-                        <!-- Case Manager -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Case Manager</label>
-                            {{ form.case_manager }}
-                        </div>
-
-                        <!-- Remark -->
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Reasons for missed appointment</label>
-                            {{ form.remark }}
-                        </div>
-
-                        <!-- Next Appointment -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Next Appointment</label>
-                            <input type="text" class="form-control"
-                                   value="{{ form.instance.next_appointment|date:'Y-m-d' }}" readonly>
-                        </div>
-
-                    </div>
-
-                    <div class="d-flex justify-content-between mt-3">
-                        <a href="{% url 'refill_list' %}" class="btn btn-secondary">
-                            Back
-                        </a>
-                        <button type="submit" class="btn btn-success">
-                            Save Record
-                        </button>
-                    </div>
-                </form>
-
+                </div>
             </div>
         </div>
     </div>
