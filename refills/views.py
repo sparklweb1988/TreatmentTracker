@@ -636,6 +636,9 @@ def refill_add_or_update(request, pk=None):
     )
 
 
+
+
+
 @login_required
 def track_refills(request):
     today = timezone.now().date()
@@ -736,6 +739,9 @@ def track_refills(request):
 
 
 def export_track_refills_to_excel(refills):
+    """
+    Export refills to Excel, including VL Eligibility Status.
+    """
     today = timezone.now().date()
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -752,7 +758,7 @@ def export_track_refills_to_excel(refills):
         refill.calculate_dates()
         next_appointment = refill.next_appointment.strftime("%Y-%m-%d") if refill.next_appointment else ""
         last_pickup = refill.last_pickup_date.strftime("%Y-%m-%d") if refill.last_pickup_date else "Never Picked"
-        days_missed = (timezone.now().date() - refill.next_appointment).days if refill.next_appointment and refill.next_appointment < timezone.now().date() else 0
+        days_missed = (today - refill.next_appointment).days if refill.next_appointment and refill.next_appointment < today else 0
         vl_status = "Eligible" if refill.is_vl_eligible else "Not Eligible"
 
         row = [
@@ -775,39 +781,6 @@ def export_track_refills_to_excel(refills):
     response['Content-Disposition'] = f'attachment; filename="Track_Refills_{today}.xlsx"'
     wb.save(response)
     return response
-
-
-
-
-def export_track_refills_to_excel(refills):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Track Refills Data"
-
-    headers = ['Unique ID', 'Facility', 'Last Pickup Date', 'Refill Days', 'Sex', 'Current Regimen', 'Case Manager', 'Next Appointment']
-    ws.append(headers)
-
-    for refill in refills:
-        row = [
-            refill.unique_id,
-            refill.facility.name if refill.facility else "",
-            refill.last_pickup_date,
-            refill.months_of_refill_days,
-            refill.sex,
-            refill.current_regimen,
-            refill.case_manager or "",
-            refill.next_appointment,
-        ]
-        ws.append(row)
-
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="track_refills.xlsx"'
-    wb.save(response)
-    return response
-
-
-
-
 
 
 
