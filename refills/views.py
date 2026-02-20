@@ -204,7 +204,7 @@ def upload_excel(request):
 
 
 
-@login_required
+
 def upload_excel(request):
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
