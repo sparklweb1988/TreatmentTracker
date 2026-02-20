@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Track Viral Load</h5>
+        </div>
+        <div class="card-body">
+
+            <!-- ================== FILTERS ================== -->
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <select class="form-select" name="facility">
+                        <option value="">All Facilities</option>
+                        {% for f in facilities %}
+                            <option value="{{ f.id }}" {% if selected_facility == f.id|stringformat:"s" %}selected{% endif %}>{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <select class="form-select" name="case_manager">
+                        <option value="">All Case Managers</option>
+                        {% for cm in case_managers %}
+                            <option value="{{ cm }}" {% if selected_case_manager == cm %}selected{% endif %}>{{ cm }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <input type="text" name="unique_id" class="form-control" placeholder="Unique ID" value="{{ selected_unique_id }}">
+                </div>
+
+                <div class="col-md-2">
+                    <input type="date" name="start_date" class="form-control" value="{{ selected_start_date }}">
+                </div>
+
+                <div class="col-md-2">
+                    <input type="date" name="end_date" class="form-control" value="{{ selected_end_date }}">
+                </div>
+
+                <div class="col-md-12 d-flex justify-content-between mt-2">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a href="?download=true" class="btn btn-success">Download Excel</a>
+                </div>
+            </form>
+
+            <!-- ================== TABLE ================== -->
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered align-middle">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Unique ID</th>
+                            <th>VL Sample Date</th>
+                            <th>Last Pickup Date</th>
+                            <th>Case Manager</th>
+                            <th>Facility</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for refill in refills %}
+                        <tr>
+                            <td>{{ refill.unique_id }}</td>
+                            <td>{{ refill.vl_sample_collection_date|date:"Y-m-d" }}</td>
+                            <td>{{ refill.last_pickup_date|date:"Y-m-d" }}</td>
+                            <td>{{ refill.case_manager }}</td>
+                            <td>{{ refill.facility.name }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if refills.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ refills.previous_page_number }}" aria-label="Previous">&laquo;</a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in refills.paginator.page_range %}
+                        {% if refills.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if refills.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ refills.next_page_number }}" aria-label="Next">&raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
