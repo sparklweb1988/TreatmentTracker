@@ -48,7 +48,7 @@ def logout_view(request):
 from io import BytesIO
 
 VALID_REFILL_MONTHS = [0.5, 1, 2, 2.8, 3, 4, 5, 6]
-@login_required
+
 def import_refills_from_excel(file):
     """
     Import refill data from Excel containing multiple facilities.
@@ -173,7 +173,7 @@ def import_refills_from_excel(file):
 
 
     # Normalize facility names
-@login_required
+
 def upload_excel(request):
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
