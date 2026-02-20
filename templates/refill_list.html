@@ -84,7 +84,7 @@
             VL Status: {{ refill.vl_status }}<br>
 
             <!-- Prediction -->
-            Missed Prediction:
+             appointment adherence forecast:
             {% if refill.prediction_probability < 30 %}
               <span class="badge bg-success">{{ refill.prediction_probability }}%</span>
             {% elif refill.prediction_probability < 70 %}
@@ -144,7 +144,7 @@
           <th>Regimen</th>
           <th>Case Manager</th>
           <th>VL Eligibility Status</th> <!-- NEW COLUMN -->
-          <th>Missed Prediction %</th>
+          <th>appointment adherence forecast %</th>
           <th>Action</th>
         </tr>
       </thead>
