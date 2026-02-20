@@ -20,7 +20,7 @@ class RefillForm(forms.ModelForm):
             'unique_id',
             'art_start_date',                  # ART Start Date
             'vl_sample_collection_date',       # Viral Load Sample Collection
-            'vl_result',                        # Viral Load Result
+            'vl_result',                       # Viral Load Result
             'last_pickup_date',
             'sex',
             'months_of_refill_days',           # now decimal
@@ -53,7 +53,7 @@ class RefillForm(forms.ModelForm):
         """
         Override save to automatically calculate:
         - VL eligibility (≥180 days on ART)
-        - VL status (Done / Eligible - Pending / Not Eligible)
+        - VL status is now read-only in model, so we DO NOT assign it here
         """
         instance = super().save(commit=False)
 
@@ -61,10 +61,11 @@ class RefillForm(forms.ModelForm):
 
         # Calculate VL eligibility
         instance.vl_eligible = False
-        if instance.art_start_date and (today - instance.art_start_date).days >= 180 and today.year >= 2026:
+        if instance.art_start_date and (today - instance.art_start_date).days >= 180:
             instance.vl_eligible = True
 
-        # Determine current quarter
+        # VL status is read-only property, so remove any assignments
+        # Determine current quarter if needed elsewhere
         def get_quarter(date):
             if not date:
                 return None
@@ -80,21 +81,10 @@ class RefillForm(forms.ModelForm):
 
         current_quarter = get_quarter(today)
 
-        # Calculate VL status
-        if not instance.vl_eligible:
-            instance.vl_status = "Not Eligible"
-        else:
-            sample_date = instance.vl_sample_collection_date
-            if sample_date and get_quarter(sample_date) == current_quarter and sample_date.year == today.year:
-                instance.vl_status = "Done"
-            else:
-                instance.vl_status = "Eligible - Pending"
-
+        # Save instance
         if commit:
             instance.save()
         return instance
-
-
 
 class UploadExcelForm(forms.Form):
     file = forms.FileField(
