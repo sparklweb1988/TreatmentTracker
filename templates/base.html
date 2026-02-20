@@ -47,10 +47,10 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
 
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                Refill+
-            </a>
-
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
+            <img src="{% static 'images/logo.png' %}" alt="Logo" width="35" height="35" class="me-2">
+            <span>Refill+</span>
+        </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
