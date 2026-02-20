@@ -13,12 +13,26 @@
         max-width: 400px;
         border-radius: 12px;
     }
+
+    .login-logo {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+    }
 </style>
 
 <div class="container login-wrapper d-flex justify-content-center align-items-center">
     <div class="card shadow login-card">
-        <div class="card-body p-4">
-            <h4 class="text-center mb-4 text-success">Welcome To ART Tracking System </h4>
+        <div class="card-body p-4 text-center">
+
+            <!-- Logo Image -->
+            <img src="{% static 'images/logo.jpeg' %}" 
+                 alt="Logo" 
+                 class="login-logo mb-3">
+
+            <h4 class="text-center mb-4 text-success">
+                Welcome To Refill+
+            </h4>
 
             <h4 class="text-center mb-4">Login</h4>
 
@@ -32,13 +46,13 @@
                 {% csrf_token %}
 
                 <!-- Username -->
-                <div class="mb-3">
+                <div class="mb-3 text-start">
                     <label class="form-label">Username</label>
                     <input type="text" name="username" class="form-control" required>
                 </div>
 
                 <!-- Password -->
-                <div class="mb-4">
+                <div class="mb-4 text-start">
                     <label class="form-label">Password</label>
                     <input type="password" name="pw" class="form-control" required>
                 </div>
