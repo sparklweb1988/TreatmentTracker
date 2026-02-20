@@ -536,6 +536,8 @@ def export_refills_to_excel(refills):
     return response
 
 
+
+# ================= REFILL CREATE =================
 @login_required
 def refill_create(request, unique_id=None):
     if unique_id:
@@ -544,45 +546,43 @@ def refill_create(request, unique_id=None):
     else:
         refill = None  # New refill if no unique_id is passed
 
-    # Get today's date, ensuring it's a datetime.date object
-    today = timezone.now().date()  # `today` is a datetime.date object
-    
-    if refill:
-        # Ensure that next_appointment is a datetime.date (not a datetime.datetime)
-        if isinstance(refill.next_appointment, datetime):  # Check if it's a datetime object
-            refill_next_appointment = refill.next_appointment.date()  # Get only the date part
-        else:
-            refill_next_appointment = refill.next_appointment  # It's already a datetime.date
+    today = timezone.now().date()  # ensure datetime.date object
 
-        # Example comparison (this is just for illustration, customize based on your logic)
-        if refill_next_appointment < today:
-            # Logic if the refill's next appointment is in the past
+    if refill:
+        # Ensure next_appointment is a date
+        if isinstance(refill.next_appointment, datetime):
+            refill_next_appointment = refill.next_appointment.date()
+        else:
+            refill_next_appointment = refill.next_appointment
+
+        if refill_next_appointment and refill_next_appointment < today:
+            # Optional: any logic for past appointments
             print("This refill's next appointment is in the past.")
 
     if request.method == 'POST':
         if refill:
-            form = RefillForm(request.POST, instance=refill)  # Edit the existing refill
+            form = RefillForm(request.POST, instance=refill)
         else:
-            form = RefillForm(request.POST)  # Create a new refill
+            form = RefillForm(request.POST)
 
         if form.is_valid():
-            form.save()
-            return redirect('daily_refill_list')  # After saving, redirect to the daily refill list
+            form.save()  # vl_status is read-only now
+            return redirect('daily_refill_list')
 
     else:
         if refill:
-            form = RefillForm(instance=refill)  # Pre-fill the form if editing
+            form = RefillForm(instance=refill)
         else:
-            form = RefillForm()  # Empty form for new refill
+            form = RefillForm()
 
     return render(request, 'refill_form.html', {'form': form})
 
 
-
+# ================= REFILL UPDATE =================
 @login_required
 def refill_update(request, pk):
     """
-    Update an existing refill entry and auto-recalculate next appointment.
+    Update an existing refill and auto-recalculate next appointment.
     """
     refill = get_object_or_404(Refill, pk=pk)
     form = RefillForm(request.POST or None, instance=refill)
@@ -591,41 +591,31 @@ def refill_update(request, pk):
         refill = form.save(commit=False)
 
         # Auto recalculate next appointment
-        refill.next_appointment = (
-            refill.last_pickup_date +
-            timedelta(days=refill.months_of_refill_days)
-        )
+        if refill.last_pickup_date and refill.months_of_refill_days:
+            days = float(refill.months_of_refill_days) * 30
+            refill.next_appointment = refill.last_pickup_date + timedelta(days=days)
 
-        refill.save()
+        refill.save()  # vl_status is read-only
         return redirect('refill_list')
 
     return render(request, "refill_form.html", {"form": form})
 
 
-
-
-
-
-
-
-
-
-
+# ================= REFILL ADD OR UPDATE =================
 @login_required
 def refill_add_or_update(request, pk=None):
     today = timezone.now().date()
 
-    # If editing an existing refill, get it by pk
     if pk:
         refill = get_object_or_404(Refill, pk=pk)
     else:
         refill = Refill()
-        refill.calculate_dates()  # Pre-calculate next_appointment and IIT for new record
+        refill.calculate_dates()  # Pre-calculate next_appointment and expected_iit_date
 
     if request.method == "POST":
         form = RefillForm(request.POST, instance=refill)
         if form.is_valid():
-            form.save()
+            form.save()  # vl_status is read-only
             return redirect("refill_list")
     else:
         form = RefillForm(instance=refill)
@@ -635,13 +625,6 @@ def refill_add_or_update(request, pk=None):
         "refill_form.html",
         {"form": form, "today": today}
     )
-
-
-
-
-
-
-
 
 
 
