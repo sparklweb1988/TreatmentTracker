@@ -1006,7 +1006,7 @@ def track_vl(request):
     selected_case_manager = request.GET.get("case_manager")
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
-    unique_id = request.GET.get("unique_id")
+    unique_id = request.GET.get("unique_id")  # no 'None' check
 
     # Safe date parsing
     start_date_obj = None
@@ -1026,12 +1026,12 @@ def track_vl(request):
     refills = Refill.objects.all()
 
     # Apply filters
-    if facility_id and facility_id != "None":
+    if facility_id:
         try:
             refills = refills.filter(facility_id=int(facility_id))
         except ValueError:
             pass
-    if selected_case_manager and selected_case_manager != "None":
+    if selected_case_manager:
         refills = refills.filter(case_manager=selected_case_manager)
     if unique_id:
         refills = refills.filter(unique_id__icontains=unique_id)
@@ -1040,10 +1040,10 @@ def track_vl(request):
     if end_date_obj:
         refills = refills.filter(vl_sample_collection_date__lte=end_date_obj)
 
-    # Pagination
-    from django.core.paginator import Paginator
+    # ================== PAGINATION ==================
     paginator = Paginator(refills.order_by('-vl_sample_collection_date'), 10)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     # Case managers for dropdown
     case_managers_qs = (
