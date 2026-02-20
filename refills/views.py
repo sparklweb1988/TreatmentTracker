@@ -595,20 +595,33 @@ def refill_update(request, pk):
 
 
 # ================= REFILL ADD OR UPDATE =================
+
+
 @login_required
 def refill_add_or_update(request, pk=None):
+    """
+    Add a new refill or update an existing one.
+    Auto-calculate next_appointment, expected_iit_date, VL eligibility, and suppression.
+    """
     today = timezone.now().date()
 
     if pk:
+        # Editing existing refill
         refill = get_object_or_404(Refill, pk=pk)
     else:
+        # New refill
         refill = Refill()
-        refill.calculate_dates()  # Pre-calculate next_appointment and expected_iit_date
 
     if request.method == "POST":
         form = RefillForm(request.POST, instance=refill)
         if form.is_valid():
-            form.save()  # vl_status is read-only
+            refill = form.save(commit=False)
+            # Ensure dates calculation
+            refill.calculate_dates()
+            # Automatically mark missed appointment if next_appointment < today
+            if refill.next_appointment and refill.next_appointment < today:
+                refill.missed_appointment = True
+            refill.save()
             return redirect("refill_list")
     else:
         form = RefillForm(instance=refill)
@@ -616,9 +629,11 @@ def refill_add_or_update(request, pk=None):
     return render(
         request,
         "refill_form.html",
-        {"form": form, "today": today}
+        {
+            "form": form,
+            "today": today
+        }
     )
-
 
 
 @login_required
